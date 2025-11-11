@@ -2,11 +2,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { useState } from 'react';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 export default function Login() {
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
@@ -17,6 +12,14 @@ export default function Login() {
     e.preventDefault();
     setErr(null);
     setLoading(true);
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) {
+      setLoading(false);
+      setErr('Missing Supabase environment variables');
+      return;
+    }
+    const supabase = createClient(url, key);
     const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
     setLoading(false);
     if (error) setErr(error.message);
