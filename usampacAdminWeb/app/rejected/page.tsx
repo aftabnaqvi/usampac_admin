@@ -1,16 +1,31 @@
 import { supabaseServer } from '@/lib/supabaseServer';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import AdminHeader from '@/app/components/AdminHeader';
 
 export default async function Rejected() {
   const supabase = supabaseServer();
   const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+  const { data: userRes } = await supabase.auth.getUser();
+  const user = userRes.user ?? null;
+  if (!user) {
+    redirect('/login');
+  }
+  try {
+    const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
+    const { data: roleRow } = await pub.from('app_users').select('role').eq('auth_sub', user.id).limit(1).single();
+    if (!roleRow || roleRow.role !== 'ADMIN') {
+      redirect('/login');
+    }
+  } catch {}
   const { data, error } = await (db as any)
     .from('candidate_profiles_admin')
     .select('*')
     .eq('approval_status', 'rejected');
 
   return (
-    <main style={{ maxWidth: 960, margin: '30px auto', padding: '0 12px' }}>
+    <main style={{ maxWidth: 960, margin: '0 auto', padding: '0 12px' }}>
+      <AdminHeader />
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <h2>Rejected Candidates</h2>
         <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -18,7 +33,7 @@ export default async function Rejected() {
           <Link href="/dashboard">Dashboard</Link>
           <Link href="/pending">Pending</Link>
           <Link href="/approved">Approved</Link>
-          { (await (await supabase.auth.getUser()).data.user) && <span style={{ color: '#666' }}>Logged in as {(await supabase.auth.getUser()).data.user?.email}</span>}
+          <span style={{ color: '#666' }}>Logged in as {user?.email}</span>
         </nav>
       </header>
       {error && <p style={{ color: 'red' }}>{error.message}</p>}

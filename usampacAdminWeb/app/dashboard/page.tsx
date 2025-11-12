@@ -1,10 +1,26 @@
 import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabaseServer';
+import { redirect } from 'next/navigation';
+import AdminHeader from '@/app/components/AdminHeader';
 
 export default async function Dashboard() {
   const supabase = supabaseServer();
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes.user ?? null;
+
+  if (!user) {
+    redirect('/login');
+  }
+  // Optional: enforce ADMIN role from app_users
+  try {
+    const db: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
+    const { data: roleRow } = await db.from('app_users').select('role').eq('auth_sub', user.id).limit(1).single();
+    if (!roleRow || roleRow.role !== 'ADMIN') {
+      redirect('/login');
+    }
+  } catch {
+    // rely on RLS if this check fails
+  }
 
   const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
@@ -41,7 +57,8 @@ export default async function Dashboard() {
   );
 
   return (
-    <main style={{ maxWidth: 1100, margin: '30px auto', padding: '0 12px' }}>
+    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '0 12px' }}>
+      <AdminHeader />
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <h2>Admin Dashboard</h2>
         <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
