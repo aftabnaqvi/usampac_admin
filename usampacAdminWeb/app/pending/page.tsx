@@ -1,20 +1,34 @@
 import { supabaseServer } from '@/lib/supabaseServer';
 import { approveCandidate, rejectCandidate } from './actions';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import AdminHeader from '@/app/components/AdminHeader';
 
 export default async function Pending() {
   const supabase = supabaseServer();
   const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-  // Get session; if no user, show login link (RLS will also protect)
+  // Get session; if no user, redirect to login
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes.user ?? null;
+  if (!user) {
+    redirect('/login');
+  }
+  // Optional server-side admin role check
+  try {
+    const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
+    const { data: roleRow } = await pub.from('app_users').select('role').eq('auth_sub', user.id).limit(1).single();
+    if (!roleRow || roleRow.role !== 'ADMIN') {
+      redirect('/login');
+    }
+  } catch {}
 
   const { data, error } = await (db as any)
     .from('candidate_profiles_pending')
     .select('*');
 
   return (
-    <main style={{ maxWidth: 960, margin: '30px auto', padding: '0 12px' }}>
+    <main style={{ maxWidth: 960, margin: '0 auto', padding: '0 12px' }}>
+      <AdminHeader />
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <h2>Pending Candidates</h2>
         <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -23,7 +37,6 @@ export default async function Pending() {
           <Link href="/approved">Approved</Link>
           <Link href="/rejected">Rejected</Link>
           {user && <span style={{ color: '#666' }}>Logged in as {user.email}</span>}
-          {!user && <Link href="/login">Login</Link>}
         </nav>
       </header>
       {error && <p style={{ color: 'red' }}>{error.message}</p>}
