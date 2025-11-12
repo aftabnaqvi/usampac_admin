@@ -12,18 +12,30 @@ export default function Login() {
     e.preventDefault();
     setErr(null);
     setLoading(true);
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key) {
+    try {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      // Debug: confirm envs are present in this build
+      // (won't print secrets; only booleans)
+      console.log('Supabase env present →', { url: !!url, key: !!key });
+      if (!url || !key) {
+        setErr('Missing Supabase environment variables');
+        return;
+      }
+      const supabase = createClient(url, key);
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
+      if (error) {
+        console.error('signIn error', error);
+        setErr(error.message || 'Sign in failed');
+        return;
+      }
+      window.location.href = '/dashboard';
+    } catch (e: any) {
+      console.error('Login handler error:', e);
+      setErr(e?.message || 'Unexpected error while signing in');
+    } finally {
       setLoading(false);
-      setErr('Missing Supabase environment variables');
-      return;
     }
-    const supabase = createClient(url, key);
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
-    setLoading(false);
-    if (error) setErr(error.message);
-    else window.location.href = '/dashboard';
   }
 
   return (
