@@ -13,13 +13,19 @@ export default function Login() {
     setErr(null);
     setLoading(true);
     try {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      // Trim to avoid accidental spaces/newlines in env values
+      const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
+      const key = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
       // Debug: confirm envs are present in this build
       // (won't print secrets; only booleans)
       console.log('Supabase env present →', { url: !!url, key: !!key });
       if (!url || !key) {
         setErr('Missing Supabase environment variables');
+        return;
+      }
+      // Basic format guard to catch bad copies before constructing client
+      if (!/^https?:\/\//i.test(url)) {
+        setErr('Invalid supabaseUrl: Must start with http(s)://');
         return;
       }
       const supabase = createClient(url, key);
