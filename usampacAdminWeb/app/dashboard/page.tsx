@@ -13,8 +13,8 @@ export default async function Dashboard() {
   }
   // Optional: enforce ADMIN role from app_users
   try {
-    const db: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
-    const { data: roleRow } = await db.from('app_users').select('role').eq('auth_sub', user.id).limit(1).single();
+    const dbPublic: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
+    const { data: roleRow } = await dbPublic.from('app_users').select('role').eq('auth_sub', user.id).limit(1).single();
     if (!roleRow || roleRow.role !== 'ADMIN') {
       redirect('/login');
     }
@@ -23,19 +23,43 @@ export default async function Dashboard() {
   }
 
   const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
 
-  // Counts
+  // Candidate counts
   const [{ count: pendingCount }, { count: approvedCount }, { count: rejectedCount }] = await Promise.all([
     db.from('candidate_profiles_pending').select('*', { count: 'exact', head: true }),
     db.from('candidate_profiles_admin').select('*', { count: 'exact', head: true }).eq('approval_status', 'approved'),
     db.from('candidate_profiles_admin').select('*', { count: 'exact', head: true }).eq('approval_status', 'rejected')
   ]);
 
-  // Sample lists (top 10)
+  // Candidate sample lists (top 10)
   const [{ data: pending }, { data: approved }, { data: rejected }] = await Promise.all([
     db.from('candidate_profiles_pending').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle').limit(10),
     db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at').eq('approval_status', 'approved').limit(10),
     db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at,reviewer_notes').eq('approval_status', 'rejected').limit(10)
+  ]);
+
+  // Polls, quiz, notifications summaries (top 5 each)
+  const [
+    { data: polls, count: pollsCount },
+    { data: quizQuestions, count: quizCount },
+    { data: notifications, count: notifCount }
+  ] = await Promise.all([
+    pub
+      .from('polls')
+      .select('id,title,is_active,created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .limit(5),
+    pub
+      .from('quiz_questions')
+      .select('id,prompt,is_active,position', { count: 'exact' })
+      .order('position', { ascending: true })
+      .limit(5),
+    pub
+      .from('notifications')
+      .select('id,title,is_active,published_at', { count: 'exact' })
+      .order('published_at', { ascending: false })
+      .limit(5)
   ]);
 
   const Card = ({ title, count, link, rows }: { title: string; count: number | null; link: string; rows: any[] | null }) => (
@@ -50,6 +74,34 @@ export default async function Dashboard() {
           <li key={r.user_id}>
             {(r.display_name ?? r.email ?? 'Candidate')} — {(r.office_level ?? '-')}/{(r.office_name ?? '-')}
           </li>
+        ))}
+        {(!rows || rows.length === 0) && <li style={{ color: '#888' }}>No items</li>}
+      </ul>
+    </section>
+  );
+
+  const SimpleCard = ({
+    title,
+    count,
+    link,
+    rows,
+    getLabel
+  }: {
+    title: string;
+    count: number | null;
+    link: string;
+    rows: any[] | null;
+    getLabel: (row: any) => string;
+  }) => (
+    <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 16, flex: 1, minWidth: 260 }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0 }}>{title}</h3>
+        <Link href={link}>Manage</Link>
+      </header>
+      <p style={{ color: '#666', marginTop: 6 }}>Total: {count ?? 0}</p>
+      <ul style={{ paddingLeft: 18 }}>
+        {(rows ?? []).map((r) => (
+          <li key={r.id ?? r.slug ?? JSON.stringify(r)}>{getLabel(r)}</li>
         ))}
         {(!rows || rows.length === 0) && <li style={{ color: '#888' }}>No items</li>}
       </ul>
@@ -73,6 +125,29 @@ export default async function Dashboard() {
         <Card title="Pending" count={pendingCount ?? 0} link="/pending" rows={pending ?? []} />
         <Card title="Approved" count={approvedCount ?? 0} link="/approved" rows={approved ?? []} />
         <Card title="Rejected" count={rejectedCount ?? 0} link="/rejected" rows={rejected ?? []} />
+      </div>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 24 }}>
+        <SimpleCard
+          title="Polls"
+          count={pollsCount ?? 0}
+          link="/polls"
+          rows={polls ?? []}
+          getLabel={(r) => `${r.title ?? 'Untitled'}${r.is_active ? ' (active)' : ''}`}
+        />
+        <SimpleCard
+          title="Quiz Questions"
+          count={quizCount ?? 0}
+          link="/quiz"
+          rows={quizQuestions ?? []}
+          getLabel={(r) => `${r.prompt?.slice(0, 60) ?? 'Untitled'}${r.is_active ? ' (active)' : ''}`}
+        />
+        <SimpleCard
+          title="Notifications"
+          count={notifCount ?? 0}
+          link="/notifications"
+          rows={notifications ?? []}
+          getLabel={(r) => `${r.title ?? 'Untitled'}${r.is_active ? ' (active)' : ''}`}
+        />
       </div>
     </main>
   );
