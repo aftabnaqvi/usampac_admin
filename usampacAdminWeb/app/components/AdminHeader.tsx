@@ -13,6 +13,9 @@ export default async function AdminHeader() {
         <Link href="/pending">Pending</Link>
         <Link href="/approved">Approved</Link>
         <Link href="/rejected">Rejected</Link>
+        <Link href="/polls">Polls</Link>
+        <Link href="/quiz">Quiz</Link>
+        <Link href="/notifications">Notifications</Link>
       </nav>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {user ? <span style={{ color: '#666' }}>{user.email}</span> : <span style={{ color: '#666' }}>Not signed in</span>}
