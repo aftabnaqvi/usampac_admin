@@ -23,7 +23,6 @@ export default async function Dashboard() {
   }
 
   const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
 
   // Candidate counts
   const [{ count: pendingCount }, { count: approvedCount }, { count: rejectedCount }] = await Promise.all([
@@ -41,26 +40,30 @@ export default async function Dashboard() {
 
   // Polls, quiz, notifications summaries (top 5 each)
   const [
-    { data: polls, count: pollsCount },
-    { data: quizQuestions, count: quizCount },
-    { data: notifications, count: notifCount }
+    { data: polls, error: pollsError, count: pollsCount },
+    { data: quizQuestions, error: quizError, count: quizCount },
+    { data: notifications, error: notifError, count: notifCount }
   ] = await Promise.all([
-    pub
+    db
       .from('polls')
       .select('id,title,is_active,created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
       .limit(5),
-    pub
+    db
       .from('quiz_questions')
       .select('id,prompt,is_active,position', { count: 'exact' })
       .order('position', { ascending: true })
       .limit(5),
-    pub
+    db
       .from('notifications')
       .select('id,title,is_active,published_at', { count: 'exact' })
       .order('published_at', { ascending: false })
       .limit(5)
   ]);
+
+  if (pollsError || quizError || notifError) {
+    console.error('DEBUG dashboard content error', { pollsError, quizError, notifError });
+  }
 
   const Card = ({ title, count, link, rows }: { title: string; count: number | null; link: string; rows: any[] | null }) => (
     <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 16, flex: 1, minWidth: 260 }}>
