@@ -4,6 +4,17 @@ import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 
+function slugify(input: string): string {
+  return (
+    input
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'poll'
+  );
+}
+
 type Poll = {
   id: string;
   slug: string | null;
@@ -27,8 +38,8 @@ async function requireAdmin() {
   if (!user) redirect('/login');
 
   try {
-    const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
-    const { data: roleRow } = await pub
+    const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+    const { data: roleRow } = await apiClient
       .from('app_users')
       .select('role')
       .eq('auth_sub', user.id)
@@ -45,12 +56,18 @@ async function requireAdmin() {
 
 async function getData() {
   const supabase = await requireAdmin();
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
-  const [{ data: polls }, { data: options }] = await Promise.all([
-    pub.from('polls').select('*').order('created_at', { ascending: false }),
-    pub.from('poll_options').select('*').order('position', { ascending: true })
-  ]);
+  const [{ data: polls, error: pollsError }, { data: options, error: optionsError }] =
+    await Promise.all([
+      apiClient.from('polls').select('*').order('created_at', { ascending: false }),
+      apiClient.from('poll_options').select('*').order('position', { ascending: true })
+    ]);
+
+  if (pollsError || optionsError) {
+    console.error('DEBUG polls.getData error', pollsError, optionsError);
+    throw new Error(pollsError?.message ?? optionsError?.message ?? 'Failed to load polls');
+  }
 
   const grouped: Record<string, PollOption[]> = {};
   (options ?? []).forEach((opt: PollOption) => {
@@ -71,20 +88,30 @@ async function upsertPoll(formData: FormData) {
 
   if (!title || title.trim() === '') return;
 
+  const normalizedTitle = title.trim();
+  const effectiveSlug =
+    slugRaw && slugRaw.trim() !== '' ? slugRaw.trim() : slugify(normalizedTitle);
+
   const supabase = await requireAdmin();
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const payload: Partial<Poll> = {
-    title: title.trim(),
+    title: normalizedTitle,
     subtitle: subtitle && subtitle.trim() !== '' ? subtitle.trim() : null,
-    slug: slugRaw && slugRaw.trim() !== '' ? slugRaw.trim() : null,
+    slug: effectiveSlug,
     is_active: isActive
   };
 
+  let error;
   if (id && id.trim() !== '') {
-    await pub.from('polls').update(payload).eq('id', id);
+    ({ error } = await apiClient.from('polls').update(payload).eq('id', id));
   } else {
-    await pub.from('polls').insert(payload);
+    ({ error } = await apiClient.from('polls').insert(payload));
+  }
+
+  if (error) {
+    console.error('DEBUG polls.upsertPoll error', error);
+    throw new Error(error.message);
   }
 
   revalidatePath('/polls');
@@ -96,8 +123,12 @@ async function deletePoll(formData: FormData) {
   if (!id) return;
 
   const supabase = await requireAdmin();
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
-  await pub.from('polls').delete().eq('id', id);
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+  const { error } = await apiClient.from('polls').delete().eq('id', id);
+  if (error) {
+    console.error('DEBUG polls.deletePoll error', error);
+    throw new Error(error.message);
+  }
   revalidatePath('/polls');
 }
 
@@ -113,7 +144,7 @@ async function upsertOption(formData: FormData) {
   const position = positionRaw ? parseInt(positionRaw, 10) || 0 : 0;
 
   const supabase = await requireAdmin();
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const payload: Partial<PollOption> = {
     poll_id: pollId,
@@ -121,10 +152,16 @@ async function upsertOption(formData: FormData) {
     position
   } as any;
 
+  let error;
   if (id && id.trim() !== '') {
-    await pub.from('poll_options').update(payload).eq('id', id);
+    ({ error } = await apiClient.from('poll_options').update(payload).eq('id', id));
   } else {
-    await pub.from('poll_options').insert(payload);
+    ({ error } = await apiClient.from('poll_options').insert(payload));
+  }
+
+  if (error) {
+    console.error('DEBUG polls.upsertOption error', error);
+    throw new Error(error.message);
   }
 
   revalidatePath('/polls');
@@ -136,8 +173,12 @@ async function deleteOption(formData: FormData) {
   if (!id) return;
 
   const supabase = await requireAdmin();
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
-  await pub.from('poll_options').delete().eq('id', id);
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+  const { error } = await apiClient.from('poll_options').delete().eq('id', id);
+  if (error) {
+    console.error('DEBUG polls.deleteOption error', error);
+    throw new Error(error.message);
+  }
   revalidatePath('/polls');
 }
 
