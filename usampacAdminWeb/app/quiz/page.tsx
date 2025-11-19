@@ -4,6 +4,20 @@ import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 
+function slugify(input: string): string {
+  return (
+    input
+      .toLowerCase()
+      .trim()
+      // replace non-alphanumerics with dashes
+      .replace(/[^a-z0-9]+/g, '-')
+      // trim leading/trailing dashes
+      .replace(/^-+|-+$/g, '')
+      // keep slugs reasonably short
+      .slice(0, 80) || 'question'
+  );
+}
+
 type QuizQuestion = {
   id: string;
   slug: string | null;
@@ -28,8 +42,8 @@ async function requireAdmin() {
   if (!user) redirect('/login');
 
   try {
-    const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
-    const { data: roleRow } = await pub
+    const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+    const { data: roleRow } = await apiClient
       .from('app_users')
       .select('role')
       .eq('auth_sub', user.id)
@@ -46,12 +60,18 @@ async function requireAdmin() {
 
 async function getData() {
   const supabase = await requireAdmin();
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
-  const [{ data: questions }, { data: options }] = await Promise.all([
-    pub.from('quiz_questions').select('*').order('position', { ascending: true }),
-    pub.from('quiz_options').select('*').order('position', { ascending: true })
-  ]);
+  const [{ data: questions, error: questionsError }, { data: options, error: optionsError }] =
+    await Promise.all([
+      apiClient.from('quiz_questions').select('*').order('position', { ascending: true }),
+      apiClient.from('quiz_options').select('*').order('position', { ascending: true })
+    ]);
+
+  if (questionsError || optionsError) {
+    console.error('DEBUG quiz.getData error', questionsError, optionsError);
+    throw new Error(questionsError?.message ?? optionsError?.message ?? 'Failed to load quiz data');
+  }
 
   const grouped: Record<string, QuizOption[]> = {};
   (options ?? []).forEach((opt: QuizOption) => {
@@ -76,23 +96,32 @@ async function upsertQuestion(formData: FormData) {
 
   if (!prompt || prompt.trim() === '') return;
 
+  const normalizedPrompt = prompt.trim();
+  const effectiveSlug =
+    slugRaw && slugRaw.trim() !== '' ? slugRaw.trim() : slugify(normalizedPrompt);
   const position = positionRaw ? parseInt(positionRaw, 10) || 0 : 0;
 
   const supabase = await requireAdmin();
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const payload: Partial<QuizQuestion> = {
-    prompt: prompt.trim(),
+    prompt: normalizedPrompt,
     explanation: explanation && explanation.trim() !== '' ? explanation.trim() : null,
-    slug: slugRaw && slugRaw.trim() !== '' ? slugRaw.trim() : null,
+    slug: effectiveSlug,
     position,
     is_active: isActive
   };
 
+  let error;
   if (id && id.trim() !== '') {
-    await pub.from('quiz_questions').update(payload).eq('id', id);
+    ({ error } = await apiClient.from('quiz_questions').update(payload).eq('id', id));
   } else {
-    await pub.from('quiz_questions').insert(payload);
+    ({ error } = await apiClient.from('quiz_questions').insert(payload));
+  }
+
+  if (error) {
+    console.error('DEBUG quiz.upsertQuestion error', error);
+    throw new Error(error.message);
   }
 
   revalidatePath('/quiz');
@@ -104,8 +133,36 @@ async function deleteQuestion(formData: FormData) {
   if (!id) return;
 
   const supabase = await requireAdmin();
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
-  await pub.from('quiz_questions').delete().eq('id', id);
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+  const { error } = await apiClient.from('quiz_questions').delete().eq('id', id);
+  if (error) {
+    console.error('DEBUG quiz.deleteQuestion error', error);
+    throw new Error(error.message);
+  }
+  revalidatePath('/quiz');
+}
+
+async function bulkDeleteQuestions(formData: FormData) {
+  'use server';
+  const ids = (formData.getAll('ids') as string[]).filter(Boolean);
+  if (!ids.length) return;
+
+  const supabase = await requireAdmin();
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+
+  // Delete options first (if cascade is not configured)
+  const { error: optError } = await apiClient.from('quiz_options').delete().in('question_id', ids);
+  if (optError) {
+    console.error('DEBUG quiz.bulkDeleteQuestions options error', optError);
+    throw new Error(optError.message);
+  }
+
+  const { error } = await apiClient.from('quiz_questions').delete().in('id', ids);
+  if (error) {
+    console.error('DEBUG quiz.bulkDeleteQuestions error', error);
+    throw new Error(error.message);
+  }
+
   revalidatePath('/quiz');
 }
 
@@ -122,7 +179,7 @@ async function upsertOption(formData: FormData) {
   const position = positionRaw ? parseInt(positionRaw, 10) || 0 : 0;
 
   const supabase = await requireAdmin();
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const payload: Partial<QuizOption> = {
     question_id: questionId,
@@ -131,10 +188,16 @@ async function upsertOption(formData: FormData) {
     position
   } as any;
 
+  let error;
   if (id && id.trim() !== '') {
-    await pub.from('quiz_options').update(payload).eq('id', id);
+    ({ error } = await apiClient.from('quiz_options').update(payload).eq('id', id));
   } else {
-    await pub.from('quiz_options').insert(payload);
+    ({ error } = await apiClient.from('quiz_options').insert(payload));
+  }
+
+  if (error) {
+    console.error('DEBUG quiz.upsertOption error', error);
+    throw new Error(error.message);
   }
 
   revalidatePath('/quiz');
@@ -146,8 +209,12 @@ async function deleteOption(formData: FormData) {
   if (!id) return;
 
   const supabase = await requireAdmin();
-  const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
-  await pub.from('quiz_options').delete().eq('id', id);
+  const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+  const { error } = await apiClient.from('quiz_options').delete().eq('id', id);
+  if (error) {
+    console.error('DEBUG quiz.deleteOption error', error);
+    throw new Error(error.message);
+  }
   revalidatePath('/quiz');
 }
 
@@ -224,6 +291,28 @@ export default async function QuizPage() {
 
       {questions.length === 0 && <p>No questions yet.</p>}
 
+      {/* Bulk delete selected questions */}
+      {questions.length > 0 && (
+        <form
+          id="bulkDeleteForm"
+          action={bulkDeleteQuestions}
+          style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}
+        >
+          <span style={{ fontSize: 14 }}>With selected:</span>
+          <button
+            type="submit"
+            style={{
+              padding: '6px 12px',
+              borderRadius: 6,
+              fontSize: 14,
+              backgroundColor: '#fee2e2'
+            }}
+          >
+            Delete selected questions
+          </button>
+        </form>
+      )}
+
       {questions.map((q) => (
         <section
           key={q.id}
@@ -235,6 +324,19 @@ export default async function QuizPage() {
           }}
         >
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            {/* Checkbox participates in bulk delete form via form attribute */}
+            <div style={{ paddingTop: 4 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <input
+                  type="checkbox"
+                  name="ids"
+                  value={q.id}
+                  form="bulkDeleteForm"
+                  style={{ margin: 0 }}
+                />
+                Select
+              </label>
+            </div>
             <form
               action={upsertQuestion}
               style={{ display: 'grid', gap: 6, maxWidth: 640, flex: 1 }}
