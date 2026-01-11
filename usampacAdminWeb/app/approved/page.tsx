@@ -2,8 +2,13 @@ import { supabaseServer } from '@/lib/supabaseServer';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
+import { promoteCandidateToElected } from './actions';
 
-export default async function Approved() {
+export default async function Approved({
+  searchParams
+}: {
+  searchParams?: { success?: string; error?: string };
+}) {
   const supabase = supabaseServer();
   const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
   const { data: userRes } = await supabase.auth.getUser();
@@ -36,6 +41,12 @@ export default async function Approved() {
           <span style={{ color: '#666' }}>Logged in as {user?.email}</span>
         </nav>
       </header>
+      {searchParams?.success && (
+        <p style={{ color: 'green' }}>Promoted to elected successfully.</p>
+      )}
+      {searchParams?.error && (
+        <p style={{ color: 'red' }}>Promote failed: {searchParams.error}</p>
+      )}
       {error && <p style={{ color: 'red' }}>{error.message}</p>}
       {!error && (!data || data.length === 0) && (
         <p>No approved candidates.</p>
@@ -54,6 +65,26 @@ export default async function Approved() {
             {row.approved_at && (
               <div style={{ color: '#444', marginTop: 4 }}>Approved at: {new Date(row.approved_at).toLocaleString()}</div>
             )}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <form
+              action={async (fd: FormData) => {
+                'use server';
+                const uid = String(fd.get('user_id'));
+                const notes = String(fd.get('notes') || '');
+                await promoteCandidateToElected(uid, notes || undefined);
+              }}
+            >
+              <input type="hidden" name="user_id" value={row.user_id} />
+              <input
+                name="notes"
+                placeholder="Promotion notes (optional)"
+                style={{ padding: 8, border: '1px solid #ddd', borderRadius: 6, marginRight: 6 }}
+              />
+              <button type="submit" style={{ padding: '8px 12px', borderRadius: 6 }}>
+                Promote to Elected
+              </button>
+            </form>
           </div>
         </article>
       ))}
