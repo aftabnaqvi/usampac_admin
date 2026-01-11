@@ -31,6 +31,14 @@ type PollOption = {
   position: number;
 };
 
+type PollOptionResult = {
+  poll_id: string;
+  option_id: string;
+  votes: number | null;
+  percent: number | null;
+  total_votes: number | null;
+};
+
 async function requireAdmin() {
   const supabase = supabaseServer();
   const { data: userRes } = await supabase.auth.getUser();
@@ -58,15 +66,21 @@ async function getData() {
   const supabase = await requireAdmin();
   const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
-  const [{ data: polls, error: pollsError }, { data: options, error: optionsError }] =
-    await Promise.all([
-      apiClient.from('polls').select('*').order('created_at', { ascending: false }),
-      apiClient.from('poll_options').select('*').order('position', { ascending: true })
-    ]);
+  const [
+    { data: polls, error: pollsError },
+    { data: options, error: optionsError },
+    { data: results, error: resultsError }
+  ] = await Promise.all([
+    apiClient.from('polls').select('*').order('created_at', { ascending: false }),
+    apiClient.from('poll_options').select('*').order('position', { ascending: true }),
+    apiClient.from('poll_option_results').select('poll_id,option_id,votes,percent,total_votes')
+  ]);
 
-  if (pollsError || optionsError) {
-    console.error('DEBUG polls.getData error', pollsError, optionsError);
-    throw new Error(pollsError?.message ?? optionsError?.message ?? 'Failed to load polls');
+  if (pollsError || optionsError || resultsError) {
+    console.error('DEBUG polls.getData error', pollsError, optionsError, resultsError);
+    throw new Error(
+      pollsError?.message ?? optionsError?.message ?? resultsError?.message ?? 'Failed to load polls'
+    );
   }
 
   const grouped: Record<string, PollOption[]> = {};
@@ -75,7 +89,13 @@ async function getData() {
     grouped[opt.poll_id].push(opt);
   });
 
-  return { polls: (polls ?? []) as Poll[], optionsByPoll: grouped };
+  const resultsByPoll: Record<string, Record<string, PollOptionResult>> = {};
+  (results ?? []).forEach((r: PollOptionResult) => {
+    if (!resultsByPoll[r.poll_id]) resultsByPoll[r.poll_id] = {};
+    resultsByPoll[r.poll_id][r.option_id] = r;
+  });
+
+  return { polls: (polls ?? []) as Poll[], optionsByPoll: grouped, resultsByPoll };
 }
 
 async function upsertPoll(formData: FormData) {
@@ -183,21 +203,14 @@ async function deleteOption(formData: FormData) {
 }
 
 export default async function PollsPage() {
-  const { polls, optionsByPoll } = await getData();
+  const { polls, optionsByPoll, resultsByPoll } = await getData();
 
   return (
-    <main style={{ maxWidth: 960, margin: '0 auto', padding: '0 12px' }}>
+    <main className="container">
       <AdminHeader />
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          margin: '16px 0 20px'
-        }}
-      >
+      <header className="pageHeader">
         <h2>Polls</h2>
-        <nav style={{ display: 'flex', gap: 12 }}>
+        <nav className="navLinks">
           <Link href="/dashboard">Dashboard</Link>
           <Link href="/pending">Pending</Link>
           <Link href="/approved">Approved</Link>
@@ -205,40 +218,27 @@ export default async function PollsPage() {
         </nav>
       </header>
 
-      <section
-        style={{
-          border: '1px solid #eee',
-          padding: 16,
-          borderRadius: 8,
-          marginBottom: 24
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>Create new poll</h3>
-        <form action={upsertPoll} style={{ display: 'grid', gap: 8, maxWidth: 520 }}>
+      <section className="card" style={{ marginBottom: 18 }}>
+        <h3 className="cardTitle">Create new poll</h3>
+        <form action={upsertPoll} style={{ display: 'grid', gap: 10, maxWidth: 720 }}>
           <input type="hidden" name="id" value="" />
           <input
             name="title"
             placeholder="Question title"
-            style={{ padding: 8, borderRadius: 6, border: '1px solid #ddd' }}
           />
           <input
             name="subtitle"
             placeholder="Subtitle (optional)"
-            style={{ padding: 8, borderRadius: 6, border: '1px solid #ddd' }}
           />
           <input
             name="slug"
             placeholder="Slug (optional)"
-            style={{ padding: 8, borderRadius: 6, border: '1px solid #ddd' }}
           />
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14 }}>
+          <label className="row" style={{ gap: 8 }}>
             <input type="checkbox" name="is_active" defaultChecked />
             Active
           </label>
-          <button
-            type="submit"
-            style={{ alignSelf: 'flex-start', padding: '8px 14px', borderRadius: 6 }}
-          >
+          <button type="submit" className="btnPrimary" style={{ width: 'fit-content' }}>
             Save poll
           </button>
         </form>
@@ -247,163 +247,125 @@ export default async function PollsPage() {
       {polls.length === 0 && <p>No polls yet.</p>}
 
       {polls.map((poll) => (
-        <section
-          key={poll.id}
-          style={{
-            border: '1px solid #eee',
-            padding: 16,
-            borderRadius: 8,
-            marginBottom: 20
-          }}
-        >
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+        <section key={poll.id} className="card" style={{ marginBottom: 16 }}>
+          <div className="row" style={{ alignItems: 'flex-end' }}>
             <form
               action={upsertPoll}
-              style={{ display: 'grid', gap: 6, marginBottom: 10, maxWidth: 520, flex: 1 }}
+              style={{ display: 'grid', gap: 10, marginBottom: 10, maxWidth: 720, flex: 1 }}
             >
               <input type="hidden" name="id" defaultValue={poll.id} />
-              <label style={{ fontSize: 12, color: '#666' }}>Title</label>
+              <label>Title</label>
               <input
                 name="title"
                 defaultValue={poll.title}
-                style={{ padding: 6, borderRadius: 6, border: '1px solid #ddd' }}
               />
-              <label style={{ fontSize: 12, color: '#666' }}>Subtitle</label>
+              <label>Subtitle</label>
               <input
                 name="subtitle"
                 defaultValue={poll.subtitle ?? ''}
-                style={{ padding: 6, borderRadius: 6, border: '1px solid #ddd' }}
               />
-              <label style={{ fontSize: 12, color: '#666' }}>Slug</label>
+              <label>Slug</label>
               <input
                 name="slug"
                 defaultValue={poll.slug ?? ''}
-                style={{ padding: 6, borderRadius: 6, border: '1px solid #ddd' }}
               />
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14 }}>
+              <label className="row" style={{ gap: 8 }}>
                 <input type="checkbox" name="is_active" defaultChecked={poll.is_active} />
                 Active
               </label>
-              <button
-                type="submit"
-                style={{ padding: '6px 12px', borderRadius: 6, fontSize: 14, marginTop: 6 }}
-              >
+              <button type="submit" className="btnPrimary" style={{ width: 'fit-content' }}>
                 Update poll
               </button>
             </form>
-            <form action={deletePoll} style={{ margin: 0 }}>
+            <form action={deletePoll} style={{ margin: 0, alignSelf: 'flex-start' }}>
               <input type="hidden" name="id" value={poll.id} />
-              <button
-                type="submit"
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  fontSize: 14,
-                  backgroundColor: '#fee2e2'
-                }}
-              >
+              <button type="submit" className="btnDanger">
                 Delete
               </button>
             </form>
           </div>
 
-          <div style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Options</h4>
-            <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
+          <div style={{ marginTop: 10 }}>
+            <h4 className="cardTitle" style={{ marginBottom: 6 }}>Options</h4>
+            <table className="table">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '4px 6px' }}>Label</th>
-                  <th style={{ textAlign: 'left', padding: '4px 6px', width: 90 }}>Position</th>
-                  <th style={{ width: 80 }} />
+                  <th>Label</th>
+                  <th style={{ width: 130 }}>Position</th>
+                  <th style={{ width: 160 }}>Results</th>
+                  <th style={{ width: 110 }} />
                 </tr>
               </thead>
               <tbody>
                 {(optionsByPoll[poll.id] ?? []).map((opt) => (
+                  (() => {
+                    const res = resultsByPoll?.[poll.id]?.[opt.id] ?? null;
+                    const pct = res?.percent ?? 0;
+                    const votes = res?.votes ?? 0;
+                    const total = res?.total_votes ?? 0;
+                    return (
                   <tr key={opt.id}>
-                    <td style={{ padding: '4px 6px' }}>
-                      <form action={upsertOption} style={{ display: 'flex', gap: 8 }}>
+                    <td>
+                      <form action={upsertOption} className="row" style={{ gap: 10, flexWrap: 'nowrap' }}>
                         <input type="hidden" name="id" defaultValue={opt.id} />
                         <input type="hidden" name="poll_id" defaultValue={poll.id} />
                         <input
                           name="label"
                           defaultValue={opt.label}
-                          style={{
-                            flex: 1,
-                            padding: 4,
-                            borderRadius: 4,
-                            border: '1px solid #ddd'
-                          }}
+                          style={{ flex: 1 }}
                         />
                         <input
                           name="position"
                           type="number"
                           defaultValue={opt.position}
-                          style={{
-                            width: 70,
-                            padding: 4,
-                            borderRadius: 4,
-                            border: '1px solid #ddd'
-                          }}
+                          style={{ width: 110 }}
                         />
-                        <button
-                          type="submit"
-                          style={{ padding: '4px 10px', borderRadius: 4 }}
-                        >
+                        <button type="submit" className="btnPrimary">
                           Save
                         </button>
                       </form>
                     </td>
                     <td />
-                    <td style={{ textAlign: 'right', paddingRight: 6 }}>
+                    <td>
+                      <div style={{ display: 'grid', gap: 4 }}>
+                        <div style={{ fontWeight: 600 }}>{pct}%</div>
+                        <div style={{ opacity: 0.75, fontSize: 12 }}>
+                          {votes} / {total} votes
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
                       <form action={deleteOption}>
                         <input type="hidden" name="id" defaultValue={opt.id} />
-                        <button
-                          type="submit"
-                          style={{
-                            padding: '4px 8px',
-                            borderRadius: 4,
-                            backgroundColor: '#fee2e2',
-                            fontSize: 12
-                          }}
-                        >
+                        <button type="submit" className="btnDanger">
                           Delete
                         </button>
                       </form>
                     </td>
                   </tr>
+                    );
+                  })()
                 ))}
                 <tr>
-                  <td colSpan={3} style={{ paddingTop: 8 }}>
+                  <td colSpan={4}>
                     <form
                       action={upsertOption}
-                      style={{ display: 'flex', gap: 8, marginTop: 4 }}
+                      className="row"
+                      style={{ gap: 10, flexWrap: 'nowrap' }}
                     >
                       <input type="hidden" name="poll_id" value={poll.id} />
                       <input
                         name="label"
                         placeholder="New option label"
-                        style={{
-                          flex: 1,
-                          padding: 4,
-                          borderRadius: 4,
-                          border: '1px solid #ddd'
-                        }}
+                        style={{ flex: 1 }}
                       />
                       <input
                         name="position"
                         type="number"
                         placeholder="Pos"
-                        style={{
-                          width: 70,
-                          padding: 4,
-                          borderRadius: 4,
-                          border: '1px solid #ddd'
-                        }}
+                        style={{ width: 110 }}
                       />
-                      <button
-                        type="submit"
-                        style={{ padding: '4px 10px', borderRadius: 4 }}
-                      >
+                      <button type="submit" className="btnPrimary">
                         Add
                       </button>
                     </form>
