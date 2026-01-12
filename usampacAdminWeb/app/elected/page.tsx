@@ -45,11 +45,32 @@ export default async function ElectedOfficialsPage() {
 
   const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
-  const { data: rows, error, count } = await db
-    .from('active_elected')
-    .select('id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end', { count: 'exact' })
+  // Prefer active_elected_public if present (includes contact fields like email/phone).
+  // Fallback to active_elected if the view doesn't exist yet.
+  let rows: any[] | null = null;
+  let error: any = null;
+  let count: number | null = null;
+
+  const attemptPublic = await db
+    .from('active_elected_public')
+    .select('id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end,email,phone', { count: 'exact' })
     .order('candidate_name', { ascending: true })
     .limit(5000);
+
+  if (!attemptPublic.error) {
+    rows = attemptPublic.data ?? null;
+    error = null;
+    count = attemptPublic.count ?? null;
+  } else {
+    const attemptFallback = await db
+      .from('active_elected')
+      .select('id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end', { count: 'exact' })
+      .order('candidate_name', { ascending: true })
+      .limit(5000);
+    rows = attemptFallback.data ?? null;
+    error = attemptFallback.error ?? null;
+    count = attemptFallback.count ?? null;
+  }
 
   return (
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '0 12px' }}>
@@ -84,6 +105,8 @@ export default async function ElectedOfficialsPage() {
                 <th style={{ textAlign: 'left', padding: 12 }}>Level</th>
                 <th style={{ textAlign: 'left', padding: 12 }}>Party</th>
                 <th style={{ textAlign: 'left', padding: 12 }}>Jurisdiction</th>
+                <th style={{ textAlign: 'left', padding: 12 }}>Email</th>
+                <th style={{ textAlign: 'left', padding: 12 }}>Phone</th>
                 <th style={{ textAlign: 'left', padding: 12 }}>Term</th>
               </tr>
             </thead>
@@ -97,6 +120,8 @@ export default async function ElectedOfficialsPage() {
                   <td style={{ padding: 12, whiteSpace: 'nowrap' }}>
                     {(r.jurisdiction_name ?? '—') + (r.state_code ? `, ${r.state_code}` : '')}
                   </td>
+                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.email ?? '—'}</td>
+                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.phone ?? '—'}</td>
                   <td style={{ padding: 12, whiteSpace: 'nowrap' }}>
                     {termLabel(r.term_start, r.term_end)}
                   </td>
@@ -104,7 +129,7 @@ export default async function ElectedOfficialsPage() {
               ))}
               {(!rows || rows.length === 0) && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 16, color: '#aaa' }}>
+                  <td colSpan={8} style={{ padding: 16, color: '#aaa' }}>
                     No elected officials found.
                   </td>
                 </tr>
