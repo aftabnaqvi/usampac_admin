@@ -38,6 +38,15 @@ export default async function Dashboard() {
     db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at,reviewer_notes').eq('approval_status', 'rejected').limit(10)
   ]);
 
+  // Elected officials summary (top 10)
+  const [{ data: elected, count: electedCount }] = await Promise.all([
+    db
+      .from('active_elected')
+      .select('id,candidate_name,office_name,term_start,term_end', { count: 'exact' })
+      .order('candidate_name', { ascending: true })
+      .limit(10)
+  ]);
+
   // Polls, quiz, notifications summaries (top 5 each)
   const [
     { data: polls, error: pollsError, count: pollsCount },
@@ -111,6 +120,24 @@ export default async function Dashboard() {
     </section>
   );
 
+  const yearFrom = (raw: any): number | null => {
+    const s = String(raw ?? '').trim();
+    if (!s) return null;
+    const d = new Date(s);
+    if (!Number.isNaN(d.getTime())) return d.getUTCFullYear();
+    const y = Number.parseInt(s.slice(0, 4), 10);
+    return Number.isFinite(y) ? y : null;
+  };
+
+  const termLabel = (start: any, end: any) => {
+    const DEFAULT_TERM_YEARS = 4;
+    const sy = yearFrom(start);
+    const ey = yearFrom(end);
+    if (sy != null && ey != null) return sy === ey ? String(sy) : `${sy}–${ey}`;
+    if (sy != null) return `${sy}–${sy + DEFAULT_TERM_YEARS}`;
+    return '—';
+  };
+
   return (
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '0 12px' }}>
       <AdminHeader />
@@ -130,6 +157,13 @@ export default async function Dashboard() {
         <Card title="Rejected" count={rejectedCount ?? 0} link="/rejected" rows={rejected ?? []} />
       </div>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 24 }}>
+        <SimpleCard
+          title="Elected Officials"
+          count={electedCount ?? 0}
+          link="/elected"
+          rows={elected ?? []}
+          getLabel={(r) => `${r.candidate_name ?? 'Elected'} — ${r.office_name ?? '-'} (${termLabel(r.term_start, r.term_end)})`}
+        />
         <SimpleCard
           title="Polls"
           count={pollsCount ?? 0}
