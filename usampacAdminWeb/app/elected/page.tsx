@@ -53,7 +53,7 @@ export default async function ElectedOfficialsPage() {
 
   const attemptPublic = await db
     .from('active_elected_public')
-    .select('id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end,email,phone', { count: 'exact' })
+    .select('id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end,email,phone,photo_url', { count: 'exact' })
     .order('candidate_name', { ascending: true })
     .limit(5000);
 
@@ -105,6 +105,7 @@ export default async function ElectedOfficialsPage() {
                 <th style={{ textAlign: 'left', padding: 12 }}>Level</th>
                 <th style={{ textAlign: 'left', padding: 12 }}>Party</th>
                 <th style={{ textAlign: 'left', padding: 12 }}>Jurisdiction</th>
+                <th style={{ textAlign: 'left', padding: 12 }}>Photo</th>
                 <th style={{ textAlign: 'left', padding: 12 }}>Email</th>
                 <th style={{ textAlign: 'left', padding: 12 }}>Phone</th>
                 <th style={{ textAlign: 'left', padding: 12 }}>Term</th>
@@ -120,6 +121,18 @@ export default async function ElectedOfficialsPage() {
                   <td style={{ padding: 12, whiteSpace: 'nowrap' }}>
                     {(r.jurisdiction_name ?? '—') + (r.state_code ? `, ${r.state_code}` : '')}
                   </td>
+                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>
+                    {r.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={r.photo_url}
+                        alt=""
+                        style={{ width: 34, height: 34, borderRadius: 999, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.18)' }}
+                      />
+                    ) : (
+                      <span style={{ opacity: 0.6 }}>—</span>
+                    )}
+                  </td>
                   <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.email ?? '—'}</td>
                   <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.phone ?? '—'}</td>
                   <td style={{ padding: 12, whiteSpace: 'nowrap' }}>
@@ -129,7 +142,7 @@ export default async function ElectedOfficialsPage() {
               ))}
               {(!rows || rows.length === 0) && (
                 <tr>
-                  <td colSpan={8} style={{ padding: 16, color: '#aaa' }}>
+                  <td colSpan={9} style={{ padding: 16, color: '#aaa' }}>
                     No elected officials found.
                   </td>
                 </tr>
