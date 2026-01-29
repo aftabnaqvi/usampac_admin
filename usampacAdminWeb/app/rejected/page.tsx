@@ -2,6 +2,7 @@ import { supabaseServer } from '@/lib/supabaseServer';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
+import { isAdminUser } from '@/lib/appUsers';
 
 export default async function Rejected() {
   const supabase = supabaseServer();
@@ -12,11 +13,9 @@ export default async function Rejected() {
     redirect('/login');
   }
   try {
-    const pub: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
-    const { data: roleRow } = await pub.from('app_users').select('role').eq('auth_sub', user.id).limit(1).single();
-    if (!roleRow || roleRow.role !== 'ADMIN') {
-      redirect('/login');
-    }
+    const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+    const ok = await isAdminUser(pub, user.id);
+    if (!ok) redirect('/login');
   } catch {}
   const { data, error } = await (db as any)
     .from('candidate_profiles_admin')

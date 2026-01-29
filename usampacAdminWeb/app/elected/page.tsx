@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
+import { isAdminUser } from '@/lib/appUsers';
 
 export default async function ElectedOfficialsPage() {
   const DEFAULT_TERM_YEARS = 4;
@@ -34,11 +35,9 @@ export default async function ElectedOfficialsPage() {
 
   // Optional: enforce ADMIN role from app_users
   try {
-    const dbPublic: any = (supabase as any).schema ? (supabase as any).schema('public') : supabase;
-    const { data: roleRow } = await dbPublic.from('app_users').select('role').eq('auth_sub', user.id).limit(1).single();
-    if (!roleRow || roleRow.role !== 'ADMIN') {
-      redirect('/login');
-    }
+    const dbPublic: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+    const ok = await isAdminUser(dbPublic, user.id);
+    if (!ok) redirect('/login');
   } catch {
     // rely on RLS if this check fails
   }
