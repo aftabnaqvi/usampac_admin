@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
+import { isAdminUser } from '@/lib/appUsers';
 
 type NotificationRow = {
   id: string;
@@ -21,15 +22,8 @@ async function requireAdmin() {
 
   try {
     const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const { data: roleRow } = await apiClient
-      .from('app_users')
-      .select('role')
-      .eq('auth_sub', user.id)
-      .limit(1)
-      .single();
-    if (!roleRow || roleRow.role !== 'ADMIN') {
-      redirect('/login');
-    }
+    const ok = await isAdminUser(apiClient, user.id);
+    if (!ok) redirect('/login');
   } catch {
     // rely on RLS if this check fails
   }

@@ -14,6 +14,8 @@ export default async function AdminHeader() {
         <Link href="/pending">Pending</Link>
         <Link href="/approved">Approved</Link>
         <Link href="/elected">Elected</Link>
+        <Link href="/manage">Manage</Link>
+        <Link href="/admins">Admins</Link>
         <Link href="/rejected">Rejected</Link>
         <Link href="/polls">Polls</Link>
         <Link href="/quiz">Quiz</Link>
