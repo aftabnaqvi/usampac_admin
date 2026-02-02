@@ -147,6 +147,7 @@ export default async function Dashboard() {
           <Link href="/pending">Pending</Link>
           <Link href="/approved">Approved</Link>
           <Link href="/rejected">Rejected</Link>
+          <Link href="/manage/election-range">Election range</Link>
           {user && <span style={{ color: '#666' }}>Logged in as {user.email}</span>}
         </nav>
       </header>
