@@ -110,6 +110,7 @@ export default async function Pending() {
     </main>
   );
   } catch (err: any) {
+    if (err?.digest === 'NEXT_REDIRECT' || err?.digest === 'NEXT_NOT_FOUND') throw err;
     const message = err?.message ?? String(err);
     return (
       <main style={{ maxWidth: 720, margin: '40px auto', padding: 24 }}>
