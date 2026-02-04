@@ -5,7 +5,8 @@ import { supabaseServer } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminUser, listAdmins } from '@/lib/appUsers';
 import { addAdminByEmail, removeAdminById } from './actions';
-import ConfirmButton from '@/app/manage/ConfirmButton';
+import AddAdminForm from './AddAdminForm';
+import RemoveAdminButton from './RemoveAdminButton';
 
 export default async function AdminsPage({
   searchParams
@@ -64,59 +65,21 @@ export default async function AdminsPage({
 
       <section style={{ border: '1px solid #333', borderRadius: 10, padding: 14, marginBottom: 18 }}>
         <h3 style={{ marginTop: 0 }}>Add Admin</h3>
-        <form
-          action={async (fd: FormData) => {
-            'use server';
-            const email = String(fd.get('email') ?? '');
-            const invite = String(fd.get('invite') ?? '') === 'on';
-            await addAdminByEmail(email, invite);
-          }}
-          style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}
-        >
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="admin@example.com"
-            style={{ flex: 1, minWidth: 220, padding: 10, borderRadius: 8, border: '1px solid #333', background: '#111', color: '#fff' }}
-          />
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" name="invite" defaultChecked />
-            Invite if missing
-          </label>
-          <button type="submit" style={{ padding: '10px 14px', borderRadius: 8 }}>
-            Add Admin
-          </button>
-        </form>
+        <AddAdminForm addAdminByEmail={addAdminByEmail} />
       </section>
 
       <section>
         <h3>Current Admins</h3>
         {(adminRows ?? []).length === 0 && !error && <p>No admins found.</p>}
         <ul>
-          {(adminRows ?? []).map((row: any) => {
-            const userId = row[idColumn] ?? row.auth_sub ?? row.user_id ?? row.id;
-            const rowEmail = row.email ?? emailById.get(userId);
+          {(adminRows ?? []).map((row: any, index: number) => {
+            const col = idColumn ?? 'id';
+            const userId = row[col] ?? row.auth_sub ?? row.user_id ?? row.id ?? `row-${index}`;
+            const rowEmail = row.email ?? emailById.get(String(userId));
             return (
-            <li key={userId} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <li key={String(userId)} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span>{rowEmail ?? userId}</span>
-              <form
-                action={async (fd: FormData) => {
-                  'use server';
-                  const uid = String(fd.get('user_id'));
-                  await removeAdminById(uid);
-                }}
-              >
-                <input type="hidden" name="user_id" value={userId} />
-                <ConfirmButton
-                  type="submit"
-                  confirmMessage="Remove admin access for this user?"
-                  style={{ padding: '4px 8px', borderRadius: 6, background: '#8b1d1d', color: '#fff' }}
-                  title="Remove admin"
-                >
-                  Remove
-                </ConfirmButton>
-              </form>
+              <RemoveAdminButton userId={String(userId)} removeAdminById={removeAdminById} />
             </li>
           );
           })}

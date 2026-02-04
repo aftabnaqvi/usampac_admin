@@ -1,9 +1,11 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { upsertAdmin, removeAdmin } from '@/lib/appUsers';
+
+export type AddAdminResult = { ok: true } | { ok: false; error: string };
+export type RemoveAdminResult = { ok: true } | { ok: false; error: string };
 
 async function findUserIdByEmail(email: string) {
   const admin = supabaseAdmin();
@@ -15,52 +17,60 @@ async function findUserIdByEmail(email: string) {
   return match?.id ?? null;
 }
 
-export async function addAdminByEmail(emailRaw: string, inviteIfMissing: boolean) {
+export async function addAdminByEmail(emailRaw: string, inviteIfMissing: boolean): Promise<AddAdminResult> {
   const email = String(emailRaw ?? '').trim().toLowerCase();
   if (!email) {
-    redirect('/admins?error=Email%20is%20required');
+    return { ok: false, error: 'Email is required' };
   }
 
-  const admin = supabaseAdmin();
-  let userId = await findUserIdByEmail(email);
+  try {
+    const admin = supabaseAdmin();
+    let userId = await findUserIdByEmail(email);
 
-  if (!userId && inviteIfMissing) {
-    const { data, error } = await admin.auth.admin.inviteUserByEmail(email);
-    if (error) {
-      redirect(`/admins?error=${encodeURIComponent(error.message)}`);
+    if (!userId && inviteIfMissing) {
+      const { data, error } = await admin.auth.admin.inviteUserByEmail(email);
+      if (error) {
+        return { ok: false, error: 'Invite failed: ' + error.message };
+      }
+      userId = data?.user?.id ?? null;
     }
-    userId = data?.user?.id ?? null;
+
+    if (!userId) {
+      return { ok: false, error: 'User not found. Have them sign up first, then add without Invite.' };
+    }
+
+    const db = (admin as any).schema ? (admin as any).schema('api') : admin;
+    const { error } = await upsertAdmin(db, userId);
+
+    if (error) {
+      return { ok: false, error: 'Set admin role failed: ' + error.message };
+    }
+
+    revalidatePath('/admins');
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? String(e) };
   }
-
-  if (!userId) {
-    redirect('/admins?error=User%20not%20found%20(try%20Invite)');
-  }
-
-  const db = (admin as any).schema ? (admin as any).schema('api') : admin;
-  const { error } = await upsertAdmin(db, userId);
-
-  if (error) {
-    redirect(`/admins?error=${encodeURIComponent(error.message)}`);
-  }
-
-  revalidatePath('/admins');
-  redirect('/admins?success=1');
 }
 
-export async function removeAdminById(userIdRaw: string) {
+export async function removeAdminById(userIdRaw: string): Promise<RemoveAdminResult> {
   const userId = String(userIdRaw ?? '').trim();
   if (!userId) {
-    redirect('/admins?error=User%20id%20is%20required');
+    return { ok: false, error: 'User id is required' };
   }
 
-  const admin = supabaseAdmin();
-  const db = (admin as any).schema ? (admin as any).schema('api') : admin;
-  const { error } = await removeAdmin(db, userId);
+  try {
+    const admin = supabaseAdmin();
+    const db = (admin as any).schema ? (admin as any).schema('api') : admin;
+    const { error } = await removeAdmin(db, userId);
 
-  if (error) {
-    redirect(`/admins?error=${encodeURIComponent(error.message)}`);
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    revalidatePath('/admins');
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? String(e) };
   }
-
-  revalidatePath('/admins');
-  redirect('/admins?success=removed');
 }
