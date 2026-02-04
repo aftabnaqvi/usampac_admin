@@ -6,26 +6,25 @@ import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 
 export default async function Pending() {
-  const supabase = supabaseServer();
-  const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-  // Get session; if no user, redirect to login
-  const { data: userRes } = await supabase.auth.getUser();
-  const user = userRes.user ?? null;
-  if (!user) {
-    redirect('/login');
-  }
-  // Optional server-side admin role check
   try {
-    const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const ok = await isAdminUser(pub, user.id);
-    if (!ok) redirect('/login');
-  } catch {}
+    const supabase = supabaseServer();
+    const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+    const { data: userRes } = await supabase.auth.getUser();
+    const user = userRes.user ?? null;
+    if (!user) {
+      redirect('/login');
+    }
+    try {
+      const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+      const ok = await isAdminUser(pub, user.id);
+      if (!ok) redirect('/login');
+    } catch {}
 
-  const { data, error } = await (db as any)
-    .from('candidate_profiles_pending')
-    .select('*');
+    const { data, error } = await (db as any)
+      .from('candidate_profiles_pending')
+      .select('*');
 
-  return (
+    return (
     <main style={{ maxWidth: 960, margin: '0 auto', padding: '0 12px' }}>
       <AdminHeader />
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -110,6 +109,18 @@ export default async function Pending() {
       })}
     </main>
   );
+  } catch (err: any) {
+    const message = err?.message ?? String(err);
+    return (
+      <main style={{ maxWidth: 720, margin: '40px auto', padding: 24 }}>
+        <h2 style={{ color: '#c00' }}>Pending page error</h2>
+        <p style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 12, borderRadius: 8 }}>{message}</p>
+        <p style={{ color: '#666', marginTop: 16 }}>
+          Check .env.local and that api.candidate_profiles_pending (or api.app_users_admin) exists in Supabase.
+        </p>
+      </main>
+    );
+  }
 }
 
 
