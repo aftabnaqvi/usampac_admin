@@ -57,11 +57,27 @@ export default async function Approved({
       {!error && (!data || data.length === 0) && (
         <p>No approved candidates.</p>
       )}
-      {data?.map((row: any) => (
+      {data?.map((row: any) => {
+        const level = String(row.office_level ?? row.office_type ?? row.level ?? '').trim().toUpperCase();
+        const stateCode = (row.state_code ?? '').toUpperCase();
+        const fec = row.fec_filing_number?.trim?.() ?? '';
+        const stateFiling = row.state_filing_number?.trim?.() ?? '';
+        const agency = row.election_agency_number?.trim?.() ?? '';
+        const complianceLines: { label: string; value: string }[] = [];
+        if (level === 'FEDERAL') {
+          complianceLines.push({ label: 'FEC Filing Doc. Num.', value: fec || 'Not provided' });
+        } else if (level === 'STATE') {
+          if (stateCode === 'CA') {
+            complianceLines.push({ label: 'FPPC Filing Number', value: stateFiling || 'Not provided' });
+          } else {
+            complianceLines.push({ label: 'Election Committee/Agency #', value: agency || 'Not provided' });
+          }
+        }
+
+        const showCompliance = level === 'FEDERAL' || level === 'STATE';
+        const isElected = electedIds.has(String(row.user_id));
+        return (
         <article key={row.user_id} style={{ border: '1px solid #eee', padding: 16, borderRadius: 8, marginBottom: 12 }}>
-          {(() => {
-            const isElected = electedIds.has(String(row.user_id));
-            return (
               <>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -82,9 +98,20 @@ export default async function Approved({
                     )}
                   </div>
                   <div style={{ color: '#666', marginTop: 4 }}>
-                    {(row.office_level ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
+                    {(row.office_level ?? row.office_type ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
                     | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Cycle: {(row.cycle ?? '-')}
                   </div>
+                  {showCompliance && (
+                    <div style={{ marginTop: 10, padding: '10px 12px', background: '#f8f9fa', borderRadius: 6, fontSize: 14 }}>
+                      <strong style={{ color: '#333' }}>Filing / compliance</strong>
+                      {complianceLines.map(({ label, value }) => (
+                        <div key={label} style={{ marginTop: 4 }}>
+                          <span style={{ color: '#555' }}>{label}:</span>{' '}
+                          <span style={{ fontFamily: 'monospace', fontWeight: 600, color: value === 'Not provided' ? '#c00' : '#1a1a1a' }}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {row.reviewer_notes && (
                     <div style={{ color: '#444', marginTop: 6 }}>Notes: {row.reviewer_notes}</div>
                   )}
@@ -119,10 +146,9 @@ export default async function Approved({
                   </form>
                 </div>
               </>
-            );
-          })()}
         </article>
-      ))}
+        );
+      })}
     </main>
   );
 }
