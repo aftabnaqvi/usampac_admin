@@ -12,21 +12,24 @@ export default async function AdminsPage({
 }: {
   searchParams?: { success?: string; error?: string };
 }) {
-  const supabase = supabaseServer();
-  const { data: userRes } = await supabase.auth.getUser();
-  const user = userRes.user ?? null;
-  if (!user) {
-    redirect('/login');
-  }
   try {
-    const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const ok = await isAdminUser(pub, user.id);
-    if (!ok) redirect('/login');
-  } catch {}
+    const supabase = supabaseServer();
+    const { data: userRes } = await supabase.auth.getUser();
+    const user = userRes.user ?? null;
+    if (!user) {
+      redirect('/login');
+    }
+    try {
+      const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+      const ok = await isAdminUser(pub, user.id);
+      if (!ok) redirect('/login');
+    } catch (e: any) {
+      if (e?.digest === 'NEXT_REDIRECT' || e?.digest === 'NEXT_NOT_FOUND') throw e;
+    }
 
-  const admin = supabaseAdmin();
-  const db = (admin as any).schema ? (admin as any).schema('api') : admin;
-  const { data: adminRows, error, idColumn } = await listAdmins(db);
+    const admin = supabaseAdmin();
+    const db = (admin as any).schema ? (admin as any).schema('api') : admin;
+    const { data: adminRows, error, idColumn } = await listAdmins(db);
 
   // Map auth_sub -> email for display (best-effort)
   let emailById = new Map<string, string>();
@@ -121,4 +124,17 @@ export default async function AdminsPage({
       </section>
     </main>
   );
+  } catch (err: any) {
+    if (err?.digest === 'NEXT_REDIRECT' || err?.digest === 'NEXT_NOT_FOUND') throw err;
+    const message = err?.message ?? String(err);
+    return (
+      <main style={{ maxWidth: 720, margin: '40px auto', padding: 24 }}>
+        <h2 style={{ color: '#c00' }}>Admins page error</h2>
+        <p style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 12, borderRadius: 8 }}>{message}</p>
+        <p style={{ color: '#666', marginTop: 16 }}>
+          On Vercel, add <strong>SUPABASE_SERVICE_ROLE_KEY</strong> in Project Settings → Environment Variables (same value as in .env.local).
+        </p>
+      </main>
+    );
+  }
 }

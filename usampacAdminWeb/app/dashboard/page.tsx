@@ -189,6 +189,7 @@ export default async function Dashboard() {
     </main>
   );
   } catch (err: any) {
+    if (err?.digest === 'NEXT_REDIRECT' || err?.digest === 'NEXT_NOT_FOUND') throw err;
     const message = err?.message ?? String(err);
     const details = err?.details ?? err?.hint ?? '';
     return (
