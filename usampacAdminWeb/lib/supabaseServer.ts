@@ -2,14 +2,17 @@ import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export function supabaseServer() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error(
+      'Missing Supabase env: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local'
+    );
+  }
   const cookieStore = cookies();
-  // Uses Auth Helpers v0.10.x for App Router server components
   return createServerComponentClient(
     { cookies: () => cookieStore },
-    {
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    }
+    { supabaseUrl: url, supabaseKey: key }
   );
 }
 

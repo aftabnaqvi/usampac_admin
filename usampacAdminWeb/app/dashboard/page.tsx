@@ -5,26 +5,26 @@ import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 
 export default async function Dashboard() {
-  const supabase = supabaseServer();
-  const { data: userRes } = await supabase.auth.getUser();
-  const user = userRes.user ?? null;
-
-  if (!user) {
-    redirect('/login');
-  }
-  // Optional: enforce ADMIN role from app_users
   try {
-    const dbPublic: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const ok = await isAdminUser(dbPublic, user.id);
-    if (!ok) redirect('/login');
-  } catch {
-    // rely on RLS if this check fails
-  }
+    const supabase = supabaseServer();
+    const { data: userRes } = await supabase.auth.getUser();
+    const user = userRes.user ?? null;
 
-  const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+    if (!user) {
+      redirect('/login');
+    }
+    try {
+      const dbPublic: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+      const ok = await isAdminUser(dbPublic, user.id);
+      if (!ok) redirect('/login');
+    } catch {
+      // rely on RLS if this check fails
+    }
 
-  // Candidate counts
-  const [{ count: pendingCount }, { count: approvedCount }, { count: rejectedCount }] = await Promise.all([
+    const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+
+    // Candidate counts
+    const [{ count: pendingCount }, { count: approvedCount }, { count: rejectedCount }] = await Promise.all([
     db.from('candidate_profiles_pending').select('*', { count: 'exact', head: true }),
     db.from('candidate_profiles_admin').select('*', { count: 'exact', head: true }).eq('approval_status', 'approved'),
     db.from('candidate_profiles_admin').select('*', { count: 'exact', head: true }).eq('approval_status', 'rejected')
@@ -188,6 +188,23 @@ export default async function Dashboard() {
       </div>
     </main>
   );
+  } catch (err: any) {
+    const message = err?.message ?? String(err);
+    const details = err?.details ?? err?.hint ?? '';
+    return (
+      <main style={{ maxWidth: 720, margin: '40px auto', padding: 24 }}>
+        <h2 style={{ color: '#c00' }}>Dashboard error</h2>
+        <p style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 12, borderRadius: 8 }}>
+          {message}
+          {details ? `\n${details}` : ''}
+        </p>
+        <p style={{ color: '#666', marginTop: 16 }}>
+          Check server logs for full stack. Common causes: missing .env.local (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY),
+          or a view/table missing in the api schema (candidate_profiles_pending, candidate_profiles_admin, app_users_admin, active_elected, etc.).
+        </p>
+      </main>
+    );
+  }
 }
 
 
