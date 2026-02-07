@@ -8,6 +8,8 @@ What it includes:
 - Approve/Reject using RPCs (`api.approve_candidate`, `api.reject_candidate`)
 - RLS protects data; only admins (`public.app_users.role = 'ADMIN'`) can view/update
 
+**Admins are not candidates.** When you add an admin (Admins page), that user is only given `role = 'ADMIN'` in `public.app_users`. They do not get a candidate profile. They can log in to this Admin UI only to approve/reject pending candidates, manage content, etc. Removing admin sets their role to VISITOR (not CANDIDATE).
+
 ## Quick start
 
 1) Create the project locally (optional; this repo already has the source)
