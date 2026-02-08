@@ -5,7 +5,9 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { upsertAdmin, removeAdmin } from '@/lib/appUsers';
 import { sendAdminInviteEmail } from '@/lib/emailAdmin';
 
-export type AddAdminResult = { ok: true; emailSent: boolean } | { ok: false; error: string };
+export type AddAdminResult =
+  | { ok: true; emailSent: boolean; invitedBySupabase: boolean }
+  | { ok: false; error: string };
 export type RemoveAdminResult = { ok: true } | { ok: false; error: string };
 
 function getAdminAppUrl(): string {
@@ -38,6 +40,7 @@ export async function addAdminByEmail(emailRaw: string, inviteIfMissing: boolean
     const redirectTo = `${adminAppUrl}/auth-complete`;
     let userId = await findUserIdByEmail(email);
     let emailSent = false;
+    let invitedBySupabase = false;
 
     if (!userId && inviteIfMissing) {
       const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
@@ -48,6 +51,7 @@ export async function addAdminByEmail(emailRaw: string, inviteIfMissing: boolean
         return { ok: false, error: 'Invite failed: ' + error.message };
       }
       userId = data?.user?.id ?? null;
+      invitedBySupabase = true; // Supabase sends the "Invite user" email for this new user
     }
 
     if (!userId) {
@@ -72,7 +76,7 @@ export async function addAdminByEmail(emailRaw: string, inviteIfMissing: boolean
     }
 
     revalidatePath('/admins');
-    return { ok: true, emailSent };
+    return { ok: true, emailSent, invitedBySupabase };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? String(e) };
   }
