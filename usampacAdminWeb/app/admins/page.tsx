@@ -56,7 +56,9 @@ export default async function AdminsPage({
 
       {searchParams?.success && (
         <p style={{ color: 'green' }}>
-          {searchParams.success === '1' && 'Admin added.'}
+          {searchParams.success === '1' && 'Admin added. (Existing user — they can log in at the admin site.)'}
+          {searchParams.success === 'email' && 'Admin added. Invite email sent.'}
+          {searchParams.success === 'invite' && 'Admin added. Supabase invite email sent for new user — check inbox/spam.'}
           {searchParams.success === 'removed' && 'Admin removed.'}
         </p>
       )}

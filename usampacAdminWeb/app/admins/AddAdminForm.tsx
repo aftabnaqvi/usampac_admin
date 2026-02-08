@@ -23,7 +23,7 @@ export default function AddAdminForm({ addAdminByEmail }: Props) {
     try {
       const result = await addAdminByEmail(email, invite);
       if (result.ok) {
-        const successParam = result.emailSent ? 'email' : '1';
+        const successParam = result.emailSent ? 'email' : result.invitedBySupabase ? 'invite' : '1';
         router.push(`/admins?success=${successParam}`);
         router.refresh();
       } else {
