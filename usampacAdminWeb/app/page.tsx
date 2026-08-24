@@ -9,7 +9,14 @@ export default function Home() {
         <Link href="/pending">Pending</Link>{' '}
         | <Link href="/approved">Approved</Link>{' '}
         | <Link href="/rejected">Rejected</Link>{' '}
-        | <Link href="/login">Login</Link>.
+        | <Link href="/login">Login</Link>
+        .
+      </p>
+      <p>
+        Public pages for the iOS app:{' '}
+        <Link href="/privacy">Privacy Policy</Link>
+        {' · '}
+        <Link href="/support">Support</Link>
       </p>
     </main>
   );
