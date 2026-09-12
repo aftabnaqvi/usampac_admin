@@ -41,18 +41,26 @@ export default async function Rejected() {
       )}
       {data?.map((row: any) => (
         <article key={row.user_id} style={{ border: '1px solid #eee', padding: 16, borderRadius: 8, marginBottom: 12 }}>
-          <div>
-            <h3 style={{ margin: 0 }}>{row.display_name ?? row.email ?? 'Candidate'}</h3>
-            <div style={{ color: '#666', marginTop: 4 }}>
-              {(row.office_level ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
-              | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Cycle: {(row.cycle ?? '-')}
+          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            {row.photo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={row.photo_url} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: 56, height: 56, borderRadius: 8, background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 24, flexShrink: 0 }}>?</div>
+            )}
+            <div>
+              <h3 style={{ margin: 0 }}>{row.display_name ?? row.email ?? 'Candidate'}</h3>
+              <div style={{ color: '#666', marginTop: 4 }}>
+                {(row.office_level ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
+                | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Election Year: {(row.cycle ?? '-')}
+              </div>
+              {row.reviewer_notes && (
+                <div style={{ color: '#444', marginTop: 6 }}>Notes: {row.reviewer_notes}</div>
+              )}
+              {row.approved_at && (
+                <div style={{ color: '#444', marginTop: 4 }}>Reviewed at: {new Date(row.approved_at).toLocaleString()}</div>
+              )}
             </div>
-            {row.reviewer_notes && (
-              <div style={{ color: '#444', marginTop: 6 }}>Notes: {row.reviewer_notes}</div>
-            )}
-            {row.approved_at && (
-              <div style={{ color: '#444', marginTop: 4 }}>Reviewed at: {new Date(row.approved_at).toLocaleString()}</div>
-            )}
           </div>
         </article>
       ))}

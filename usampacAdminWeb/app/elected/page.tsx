@@ -126,7 +126,7 @@ export default async function ElectedOfficialsPage() {
                       <img
                         src={r.photo_url}
                         alt=""
-                        style={{ width: 34, height: 34, borderRadius: 999, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.18)' }}
+                        style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.18)' }}
                       />
                     ) : (
                       <span style={{ opacity: 0.6 }}>—</span>

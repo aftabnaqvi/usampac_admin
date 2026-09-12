@@ -63,11 +63,18 @@ export default async function Pending() {
         return (
         <article key={row.user_id} style={{ border: '1px solid #eee', padding: 16, borderRadius: 8, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              {row.photo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={row.photo_url} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: 56, height: 56, borderRadius: 8, background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 24 }}>?</div>
+              )}
+              <div>
               <h3 style={{ margin: 0 }}>{row.display_name ?? row.email ?? 'Candidate'}</h3>
               <div style={{ color: '#666', marginTop: 4 }}>
                 {(row.office_level ?? row.office_type ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
-                | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Cycle: {(row.cycle ?? '-')}
+                | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Election Year: {(row.cycle ?? '-')}
               </div>
               {showCompliance && (
                 <div style={{ marginTop: 10, padding: '10px 12px', background: '#f0f4f8', border: '1px solid #dde', borderRadius: 6, fontSize: 14 }}>
@@ -80,6 +87,7 @@ export default async function Pending() {
                   ))}
                 </div>
               )}
+            </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>

@@ -80,6 +80,13 @@ export default async function Approved({
         return (
         <article key={row.user_id} style={{ border: '1px solid #eee', padding: 16, borderRadius: 8, marginBottom: 12 }}>
               <>
+                <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                  {row.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={row.photo_url} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 56, height: 56, borderRadius: 8, background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 24, flexShrink: 0 }}>?</div>
+                  )}
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <h3 style={{ margin: 0 }}>{row.display_name ?? row.email ?? 'Candidate'}</h3>
@@ -100,7 +107,7 @@ export default async function Approved({
                   </div>
                   <div style={{ color: '#666', marginTop: 4 }}>
                     {(row.office_level ?? row.office_type ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
-                    | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Cycle: {(row.cycle ?? '-')}
+                    | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Election Year: {(row.cycle ?? '-')}
                   </div>
                   {showCompliance && (
                     <div style={{ marginTop: 10, padding: '10px 12px', background: '#f8f9fa', borderRadius: 6, fontSize: 14 }}>
@@ -119,6 +126,7 @@ export default async function Approved({
                   {row.approved_at && (
                     <div style={{ color: '#444', marginTop: 4 }}>Approved at: {new Date(row.approved_at).toLocaleString()}</div>
                   )}
+                </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                   <form
