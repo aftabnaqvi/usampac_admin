@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -25,7 +24,7 @@ export default async function AdminsPage({
       const ok = await isAdminUser(pub, user.id);
       if (!ok) redirect('/login');
     } catch (e: any) {
-      if (e?.digest === 'NEXT_REDIRECT' || e?.digest === 'NEXT_NOT_FOUND') throw e;
+      if (String(e?.digest ?? '').startsWith('NEXT_REDIRECT') || String(e?.digest ?? '').startsWith('NEXT_NOT_FOUND')) throw e;
     }
 
     const admin = supabaseAdmin();
@@ -44,33 +43,30 @@ export default async function AdminsPage({
   }
 
   return (
-    <main style={{ maxWidth: 960, margin: '0 auto', padding: '0 12px' }}>
+    <>
       <AdminHeader />
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '18px 0 12px' }}>
+      <main className="container">
+      <header className="pageHeader">
         <h2>Admins</h2>
-        <nav style={{ display: 'flex', gap: 12 }}>
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/manage">Manage</Link>
-        </nav>
       </header>
 
       {searchParams?.success && (
-        <p style={{ color: 'green' }}>
+        <p className="flashOk">
           {searchParams.success === '1' && 'Admin added. (Existing user — they can log in at the admin site.)'}
           {searchParams.success === 'email' && 'Admin added. Invite email sent.'}
           {searchParams.success === 'invite' && 'Admin added. Supabase invite email sent for new user — check inbox/spam.'}
           {searchParams.success === 'removed' && 'Admin removed.'}
         </p>
       )}
-      {searchParams?.error && <p style={{ color: 'red' }}>Error: {searchParams.error}</p>}
-      {error && <p style={{ color: 'red' }}>{error.message}</p>}
+      {searchParams?.error && <p className="flashErr">Error: {searchParams.error}</p>}
+      {error && <p className="flashErr">{error.message}</p>}
 
-      <section style={{ border: '1px solid #333', borderRadius: 10, padding: 14, marginBottom: 18 }}>
-        <h3 style={{ marginTop: 0 }}>Add Admin</h3>
+      <section className="card">
+        <h3 className="cardTitle">Add Admin</h3>
         <AddAdminForm addAdminByEmail={addAdminByEmail} />
       </section>
 
-      <section>
+      <section className="sectionBlock">
         <h3>Current Admins</h3>
         {(adminRows ?? []).length === 0 && !error && <p>No admins found.</p>}
         <ul>
@@ -79,7 +75,7 @@ export default async function AdminsPage({
             const userId = row[col] ?? row.auth_sub ?? row.user_id ?? row.id ?? `row-${index}`;
             const rowEmail = row.email ?? emailById.get(String(userId));
             return (
-            <li key={String(userId)} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <li key={String(userId)} className="row" style={{ marginBottom: 8 }}>
               <span>{rowEmail ?? userId}</span>
               <RemoveAdminButton userId={String(userId)} removeAdminById={removeAdminById} />
             </li>
@@ -87,16 +83,17 @@ export default async function AdminsPage({
           })}
         </ul>
       </section>
-    </main>
+      </main>
+    </>
   );
   } catch (err: any) {
-    if (err?.digest === 'NEXT_REDIRECT' || err?.digest === 'NEXT_NOT_FOUND') throw err;
+    if (String(err?.digest ?? '').startsWith('NEXT_REDIRECT') || String(err?.digest ?? '').startsWith('NEXT_NOT_FOUND')) throw err;
     const message = err?.message ?? String(err);
     return (
-      <main style={{ maxWidth: 720, margin: '40px auto', padding: 24 }}>
-        <h2 style={{ color: '#c00' }}>Admins page error</h2>
-        <p style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 12, borderRadius: 8 }}>{message}</p>
-        <p style={{ color: '#666', marginTop: 16 }}>
+      <main className="errorPanel card">
+        <h2>Admins page error</h2>
+        <p className="errorCode">{message}</p>
+        <p className="muted">
           On Vercel, add <strong>SUPABASE_SERVICE_ROLE_KEY</strong> in Project Settings → Environment Variables (same value as in .env.local).
         </p>
       </main>

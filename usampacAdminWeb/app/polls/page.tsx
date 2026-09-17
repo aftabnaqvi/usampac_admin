@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -200,16 +199,11 @@ export default async function PollsPage() {
   const { polls, optionsByPoll, resultsByPoll } = await getData();
 
   return (
-    <main className="container">
+    <>
       <AdminHeader />
+      <main className="container">
       <header className="pageHeader">
         <h2>Polls</h2>
-        <nav className="navLinks">
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/pending">Pending</Link>
-          <Link href="/approved">Approved</Link>
-          <Link href="/rejected">Rejected</Link>
-        </nav>
       </header>
 
       <section className="card" style={{ marginBottom: 18 }}>
@@ -228,11 +222,11 @@ export default async function PollsPage() {
             name="slug"
             placeholder="Slug (optional)"
           />
-          <label className="row" style={{ gap: 8 }}>
+          <label className="checkRow">
             <input type="checkbox" name="is_active" defaultChecked />
             Active
           </label>
-          <button type="submit" className="btnPrimary" style={{ width: 'fit-content' }}>
+          <button type="submit" className="btnPrimary btnFit">
             Save poll
           </button>
         </form>
@@ -263,11 +257,11 @@ export default async function PollsPage() {
                 name="slug"
                 defaultValue={poll.slug ?? ''}
               />
-              <label className="row" style={{ gap: 8 }}>
+              <label className="checkRow">
                 <input type="checkbox" name="is_active" defaultChecked={poll.is_active} />
                 Active
               </label>
-              <button type="submit" className="btnPrimary" style={{ width: 'fit-content' }}>
+              <button type="submit" className="btnPrimary btnFit">
                 Update poll
               </button>
             </form>
@@ -323,7 +317,7 @@ export default async function PollsPage() {
                     <td>
                       <div style={{ display: 'grid', gap: 4 }}>
                         <div style={{ fontWeight: 600 }}>{pct}%</div>
-                        <div style={{ opacity: 0.75, fontSize: 12 }}>
+                        <div className="muted" style={{ fontSize: 12 }}>
                           {votes} / {total} votes
                         </div>
                       </div>
@@ -370,7 +364,8 @@ export default async function PollsPage() {
           </div>
         </section>
       ))}
-    </main>
+      </main>
+    </>
   );
 }
 

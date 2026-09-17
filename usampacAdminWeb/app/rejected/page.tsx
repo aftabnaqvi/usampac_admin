@@ -23,48 +23,47 @@ export default async function Rejected() {
     .eq('approval_status', 'rejected');
 
   return (
-    <main style={{ maxWidth: 960, margin: '0 auto', padding: '0 12px' }}>
+    <>
       <AdminHeader />
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <main className="container">
+      <header className="pageHeader">
         <h2>Rejected Candidates</h2>
-        <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <nav className="pageNav">
           <Link href="/">Home</Link>
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/pending">Pending</Link>
-          <Link href="/approved">Approved</Link>
-          <span style={{ color: '#666' }}>Logged in as {user?.email}</span>
+          <span className="muted">Logged in as {user?.email}</span>
         </nav>
       </header>
-      {error && <p style={{ color: 'red' }}>{error.message}</p>}
+      {error && <p className="flashErr">{error.message}</p>}
       {!error && (!data || data.length === 0) && (
         <p>No rejected candidates.</p>
       )}
       {data?.map((row: any) => (
-        <article key={row.user_id} style={{ border: '1px solid #eee', padding: 16, borderRadius: 8, marginBottom: 12 }}>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+        <article key={row.user_id} className="card">
+          <div className="row" style={{ alignItems: 'flex-start' }}>
             {row.photo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={row.photo_url} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+              <img src={row.photo_url} alt="" className="avatar" />
             ) : (
-              <div style={{ width: 56, height: 56, borderRadius: 8, background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 24, flexShrink: 0 }}>?</div>
+              <div className="avatarFallback">?</div>
             )}
             <div>
               <h3 style={{ margin: 0 }}>{row.display_name ?? row.email ?? 'Candidate'}</h3>
-              <div style={{ color: '#666', marginTop: 4 }}>
+              <div className="muted" style={{ marginTop: 4 }}>
                 {(row.office_level ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
                 | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Election Year: {(row.cycle ?? '-')}
               </div>
               {row.reviewer_notes && (
-                <div style={{ color: '#444', marginTop: 6 }}>Notes: {row.reviewer_notes}</div>
+                <div style={{ marginTop: 6 }}>Notes: {row.reviewer_notes}</div>
               )}
               {row.approved_at && (
-                <div style={{ color: '#444', marginTop: 4 }}>Reviewed at: {new Date(row.approved_at).toLocaleString()}</div>
+                <div className="muted" style={{ marginTop: 4 }}>Reviewed at: {new Date(row.approved_at).toLocaleString()}</div>
               )}
             </div>
           </div>
         </article>
       ))}
-    </main>
+      </main>
+    </>
   );
 }
 

@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function SupportPage() {
   return (
-    <PublicLegalShell title="App Support">
+    <PublicLegalShell title="App Support" active="support">
       <p>
         This page is for people using the USAMPAC iOS app — guests browsing candidates, and
         candidates or elected officials who registered in the app.

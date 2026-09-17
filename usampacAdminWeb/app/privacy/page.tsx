@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <PublicLegalShell title="Privacy Policy">
+    <PublicLegalShell title="Privacy Policy" active="privacy">
       <p className="muted">Effective August 23, 2026</p>
 
       <h2>Who we are</h2>

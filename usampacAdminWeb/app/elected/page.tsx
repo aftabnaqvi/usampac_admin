@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
@@ -72,76 +71,72 @@ export default async function ElectedOfficialsPage() {
   }
 
   return (
-    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '0 12px' }}>
+    <>
       <AdminHeader />
-
-      <header style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '18px 0 12px' }}>
+      <main className="container">
+      <header className="pageHeader">
         <div>
-          <h2 style={{ margin: 0 }}>Elected Officials</h2>
-          <p style={{ color: '#aaa', margin: '6px 0 0' }}>
+          <h2>Elected Officials</h2>
+          <p className="muted" style={{ margin: '6px 0 0' }}>
             Total: <strong>{count ?? (rows?.length ?? 0)}</strong>
           </p>
         </div>
-        <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/approved">Approved</Link>
-        </nav>
       </header>
 
       {error && (
-        <p style={{ color: 'red' }}>
+        <p className="flashErr">
           Error loading elected officials: {error.message}
         </p>
       )}
 
-      <section style={{ border: '1px solid #333', borderRadius: 10, overflow: 'hidden' }}>
+      <section className="tableWrap">
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="table" style={{ marginTop: 0 }}>
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.06)' }}>
-                <th style={{ textAlign: 'left', padding: 12 }}>Name</th>
-                <th style={{ textAlign: 'left', padding: 12 }}>Office</th>
-                <th style={{ textAlign: 'left', padding: 12 }}>Level</th>
-                <th style={{ textAlign: 'left', padding: 12 }}>Party</th>
-                <th style={{ textAlign: 'left', padding: 12 }}>Jurisdiction</th>
-                <th style={{ textAlign: 'left', padding: 12 }}>Photo</th>
-                <th style={{ textAlign: 'left', padding: 12 }}>Email</th>
-                <th style={{ textAlign: 'left', padding: 12 }}>Phone</th>
-                <th style={{ textAlign: 'left', padding: 12 }}>Term</th>
+              <tr>
+                <th>Name</th>
+                <th>Office</th>
+                <th>Level</th>
+                <th>Party</th>
+                <th>Jurisdiction</th>
+                <th>Photo</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Term</th>
               </tr>
             </thead>
             <tbody>
               {(rows ?? []).map((r: any) => (
-                <tr key={r.id} style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.candidate_name ?? '—'}</td>
-                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.office_name ?? '—'}</td>
-                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.level ?? '—'}</td>
-                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.party ?? '—'}</td>
-                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>
+                <tr key={r.id}>
+                  <td style={{ whiteSpace: 'nowrap' }}>{r.candidate_name ?? '—'}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{r.office_name ?? '—'}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{r.level ?? '—'}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{r.party ?? '—'}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     {(r.jurisdiction_name ?? '—') + (r.state_code ? `, ${r.state_code}` : '')}
                   </td>
-                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     {r.photo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={r.photo_url}
                         alt=""
-                        style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.18)' }}
+                        className="thumb"
                       />
                     ) : (
-                      <span style={{ opacity: 0.6 }}>—</span>
+                      <span className="muted">—</span>
                     )}
                   </td>
-                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.email ?? '—'}</td>
-                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.phone ?? '—'}</td>
-                  <td style={{ padding: 12, whiteSpace: 'nowrap' }}>
+                  <td style={{ whiteSpace: 'nowrap' }}>{r.email ?? '—'}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{r.phone ?? '—'}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     {termLabel(r.term_start, r.term_end)}
                   </td>
                 </tr>
               ))}
               {(!rows || rows.length === 0) && (
                 <tr>
-                  <td colSpan={9} style={{ padding: 16, color: '#aaa' }}>
+                  <td colSpan={9} className="muted">
                     No elected officials found.
                   </td>
                 </tr>
@@ -150,7 +145,8 @@ export default async function ElectedOfficialsPage() {
           </table>
         </div>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 

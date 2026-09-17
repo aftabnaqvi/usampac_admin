@@ -36,7 +36,7 @@ export default function RemoveAdminButton({ userId, removeAdminById }: Props) {
       confirmMessage="Remove admin access for this user?"
       onClick={handleRemove}
       disabled={pending}
-      style={{ padding: '4px 8px', borderRadius: 6, background: '#8b1d1d', color: '#fff' }}
+      className="btnDanger"
       title="Remove admin"
     >
       {pending ? '…' : 'Remove'}

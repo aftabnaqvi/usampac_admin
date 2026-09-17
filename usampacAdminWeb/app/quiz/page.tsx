@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -216,68 +215,42 @@ export default async function QuizPage() {
   const { questions, optionsByQuestion } = await getData();
 
   return (
-    <main style={{ maxWidth: 960, margin: '0 auto', padding: '0 12px' }}>
+    <>
       <AdminHeader />
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          margin: '16px 0 20px'
-        }}
-      >
+      <main className="container">
+      <header className="pageHeader">
         <h2>Quiz Questions</h2>
-        <nav style={{ display: 'flex', gap: 12 }}>
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/pending">Pending</Link>
-          <Link href="/approved">Approved</Link>
-          <Link href="/rejected">Rejected</Link>
-        </nav>
       </header>
 
-      {/* Create new question */}
-      <section
-        style={{
-          border: '1px solid #eee',
-          padding: 16,
-          borderRadius: 8,
-          marginBottom: 24
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>Create new question</h3>
-        <form action={upsertQuestion} style={{ display: 'grid', gap: 8, maxWidth: 640 }}>
+      <section className="card">
+        <h3 className="cardTitle">Create new question</h3>
+        <form action={upsertQuestion} className="formGrid">
           <input type="hidden" name="id" value="" />
           <textarea
             name="prompt"
             placeholder="Question prompt"
             rows={3}
-            style={{ padding: 8, borderRadius: 6, border: '1px solid #ddd' }}
           />
           <textarea
             name="explanation"
             placeholder="Explanation (optional)"
             rows={2}
-            style={{ padding: 8, borderRadius: 6, border: '1px solid #ddd' }}
           />
           <input
             name="slug"
             placeholder="Slug (optional)"
-            style={{ padding: 8, borderRadius: 6, border: '1px solid #ddd' }}
           />
           <input
             name="position"
             type="number"
             placeholder="Position (e.g. 1, 2, 3)"
-            style={{ padding: 8, borderRadius: 6, border: '1px solid #ddd', width: 160 }}
+            style={{ width: 160 }}
           />
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14 }}>
+          <label className="checkRow">
             <input type="checkbox" name="is_active" defaultChecked />
             Active
           </label>
-          <button
-            type="submit"
-            style={{ alignSelf: 'flex-start', padding: '8px 14px', borderRadius: 6 }}
-          >
+          <button type="submit" className="btnPrimary btnFit">
             Save question
           </button>
         </form>
@@ -290,37 +263,21 @@ export default async function QuizPage() {
         <form
           id="bulkDeleteForm"
           action={bulkDeleteQuestions}
-          style={{ marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}
+          className="row"
+          style={{ marginBottom: 16 }}
         >
           <span style={{ fontSize: 14 }}>With selected:</span>
-          <button
-            type="submit"
-            style={{
-              padding: '6px 12px',
-              borderRadius: 6,
-              fontSize: 14,
-              backgroundColor: '#fee2e2'
-            }}
-          >
+          <button type="submit" className="btnDanger">
             Delete selected questions
           </button>
         </form>
       )}
 
       {questions.map((q) => (
-        <section
-          key={q.id}
-          style={{
-            border: '1px solid #eee',
-            padding: 16,
-            borderRadius: 8,
-            marginBottom: 20
-          }}
-        >
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            {/* Checkbox participates in bulk delete form via form attribute */}
+        <section key={q.id} className="card">
+          <div className="row" style={{ alignItems: 'flex-start' }}>
             <div style={{ paddingTop: 4 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+              <label className="checkRow" style={{ fontSize: 12 }}>
                 <input
                   type="checkbox"
                   name="ids"
@@ -333,99 +290,74 @@ export default async function QuizPage() {
             </div>
             <form
               action={upsertQuestion}
-              style={{ display: 'grid', gap: 6, maxWidth: 640, flex: 1 }}
+              className="formGrid"
+              style={{ flex: 1 }}
             >
               <input type="hidden" name="id" defaultValue={q.id} />
-              <label style={{ fontSize: 12, color: '#666' }}>Prompt</label>
+              <label>Prompt</label>
               <textarea
                 name="prompt"
                 defaultValue={q.prompt}
                 rows={3}
-                style={{ padding: 6, borderRadius: 6, border: '1px solid #ddd' }}
               />
-              <label style={{ fontSize: 12, color: '#666' }}>Explanation</label>
+              <label>Explanation</label>
               <textarea
                 name="explanation"
                 defaultValue={q.explanation ?? ''}
                 rows={2}
-                style={{ padding: 6, borderRadius: 6, border: '1px solid #ddd' }}
               />
-              <label style={{ fontSize: 12, color: '#666' }}>Slug</label>
+              <label>Slug</label>
               <input
                 name="slug"
                 defaultValue={q.slug ?? ''}
-                style={{ padding: 6, borderRadius: 6, border: '1px solid #ddd' }}
               />
-              <label style={{ fontSize: 12, color: '#666' }}>Position</label>
+              <label>Position</label>
               <input
                 name="position"
                 type="number"
                 defaultValue={q.position}
-                style={{ padding: 6, borderRadius: 6, border: '1px solid #ddd', width: 160 }}
+                style={{ width: 160 }}
               />
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14 }}>
+              <label className="checkRow">
                 <input type="checkbox" name="is_active" defaultChecked={q.is_active} />
                 Active
               </label>
-              <button
-                type="submit"
-                style={{ padding: '6px 12px', borderRadius: 6, fontSize: 14, marginTop: 6 }}
-              >
+              <button type="submit" className="btnPrimary btnFit">
                 Update question
               </button>
             </form>
             <form action={deleteQuestion} style={{ margin: 0 }}>
               <input type="hidden" name="id" value={q.id} />
-              <button
-                type="submit"
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  fontSize: 14,
-                  backgroundColor: '#fee2e2'
-                }}
-              >
+              <button type="submit" className="btnDanger">
                 Delete
               </button>
             </form>
           </div>
 
           <div style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Options</h4>
-            <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
+            <h4 className="cardTitle" style={{ marginBottom: 6 }}>Options</h4>
+            <table className="table">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '4px 6px' }}>Label</th>
-                  <th style={{ textAlign: 'center', padding: '4px 6px', width: 80 }}>Correct</th>
-                  <th style={{ textAlign: 'left', padding: '4px 6px', width: 90 }}>Position</th>
+                  <th>Label</th>
+                  <th style={{ width: 80 }}>Correct</th>
+                  <th style={{ width: 90 }}>Position</th>
                   <th style={{ width: 80 }} />
                 </tr>
               </thead>
               <tbody>
                 {(optionsByQuestion[q.id] ?? []).map((opt) => (
                   <tr key={opt.id}>
-                    <td style={{ padding: '4px 6px' }}>
-                      <form action={upsertOption} style={{ display: 'flex', gap: 8 }}>
+                    <td>
+                      <form action={upsertOption} className="formInline">
                         <input type="hidden" name="id" defaultValue={opt.id} />
                         <input type="hidden" name="question_id" defaultValue={q.id} />
                         <input
                           name="label"
                           defaultValue={opt.label}
-                          style={{
-                            flex: 1,
-                            padding: 4,
-                            borderRadius: 4,
-                            border: '1px solid #ddd'
-                          }}
+                          style={{ flex: 1 }}
                         />
-                        <label
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            fontSize: 12
-                          }}
-                        >
+                        <label className="checkRow" style={{ fontSize: 12 }}>
                           <input
                             type="checkbox"
                             name="is_correct"
@@ -437,34 +369,18 @@ export default async function QuizPage() {
                           name="position"
                           type="number"
                           defaultValue={opt.position}
-                          style={{
-                            width: 70,
-                            padding: 4,
-                            borderRadius: 4,
-                            border: '1px solid #ddd'
-                          }}
+                          style={{ width: 70 }}
                         />
-                        <button
-                          type="submit"
-                          style={{ padding: '4px 10px', borderRadius: 4 }}
-                        >
+                        <button type="submit" className="btnPrimary">
                           Save
                         </button>
                       </form>
                     </td>
                     <td />
-                    <td style={{ textAlign: 'right', paddingRight: 6 }}>
+                    <td style={{ textAlign: 'right' }}>
                       <form action={deleteOption}>
                         <input type="hidden" name="id" defaultValue={opt.id} />
-                        <button
-                          type="submit"
-                          style={{
-                            padding: '4px 8px',
-                            borderRadius: 4,
-                            backgroundColor: '#fee2e2',
-                            fontSize: 12
-                          }}
-                        >
+                        <button type="submit" className="btnDanger">
                           Delete
                         </button>
                       </form>
@@ -472,30 +388,15 @@ export default async function QuizPage() {
                   </tr>
                 ))}
                 <tr>
-                  <td colSpan={4} style={{ paddingTop: 8 }}>
-                    <form
-                      action={upsertOption}
-                      style={{ display: 'flex', gap: 8, marginTop: 4 }}
-                    >
+                  <td colSpan={4}>
+                    <form action={upsertOption} className="formInline">
                       <input type="hidden" name="question_id" value={q.id} />
                       <input
                         name="label"
                         placeholder="New option label"
-                        style={{
-                          flex: 1,
-                          padding: 4,
-                          borderRadius: 4,
-                          border: '1px solid #ddd'
-                        }}
+                        style={{ flex: 1 }}
                       />
-                      <label
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          fontSize: 12
-                        }}
-                      >
+                      <label className="checkRow" style={{ fontSize: 12 }}>
                         <input type="checkbox" name="is_correct" />
                         Correct
                       </label>
@@ -503,17 +404,9 @@ export default async function QuizPage() {
                         name="position"
                         type="number"
                         placeholder="Pos"
-                        style={{
-                          width: 70,
-                          padding: 4,
-                          borderRadius: 4,
-                          border: '1px solid #ddd'
-                        }}
+                        style={{ width: 70 }}
                       />
-                      <button
-                        type="submit"
-                        style={{ padding: '4px 10px', borderRadius: 4 }}
-                      >
+                      <button type="submit" className="btnPrimary">
                         Add
                       </button>
                     </form>
@@ -524,7 +417,8 @@ export default async function QuizPage() {
           </div>
         </section>
       ))}
-    </main>
+      </main>
+    </>
   );
 }
 

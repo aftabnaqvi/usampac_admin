@@ -74,19 +74,19 @@ export default async function Dashboard() {
   }
 
   const Card = ({ title, count, link, rows }: { title: string; count: number | null; link: string; rows: any[] | null }) => (
-    <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 16, flex: 1, minWidth: 260 }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0 }}>{title}</h3>
+    <section className="card">
+      <header className="row" style={{ justifyContent: 'space-between' }}>
+        <h3 className="cardTitle" style={{ margin: 0 }}>{title}</h3>
         <Link href={link}>View all</Link>
       </header>
-      <p style={{ color: '#666', marginTop: 6 }}>Total: {count ?? 0}</p>
+      <p className="muted" style={{ marginTop: 6 }}>Total: {count ?? 0}</p>
       <ul style={{ paddingLeft: 18 }}>
         {(rows ?? []).map((r) => (
           <li key={r.user_id}>
             {(r.display_name ?? r.email ?? 'Candidate')} — {(r.office_level ?? '-')}/{(r.office_name ?? '-')}
           </li>
         ))}
-        {(!rows || rows.length === 0) && <li style={{ color: '#888' }}>No items</li>}
+        {(!rows || rows.length === 0) && <li className="muted">No items</li>}
       </ul>
     </section>
   );
@@ -104,17 +104,17 @@ export default async function Dashboard() {
     rows: any[] | null;
     getLabel: (row: any) => string;
   }) => (
-    <section style={{ border: '1px solid #eee', borderRadius: 8, padding: 16, flex: 1, minWidth: 260 }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0 }}>{title}</h3>
+    <section className="card">
+      <header className="row" style={{ justifyContent: 'space-between' }}>
+        <h3 className="cardTitle" style={{ margin: 0 }}>{title}</h3>
         <Link href={link}>Manage</Link>
       </header>
-      <p style={{ color: '#666', marginTop: 6 }}>Total: {count ?? 0}</p>
+      <p className="muted" style={{ marginTop: 6 }}>Total: {count ?? 0}</p>
       <ul style={{ paddingLeft: 18 }}>
         {(rows ?? []).map((r) => (
           <li key={r.id ?? r.slug ?? JSON.stringify(r)}>{getLabel(r)}</li>
         ))}
-        {(!rows || rows.length === 0) && <li style={{ color: '#888' }}>No items</li>}
+        {(!rows || rows.length === 0) && <li className="muted">No items</li>}
       </ul>
     </section>
   );
@@ -138,25 +138,23 @@ export default async function Dashboard() {
   };
 
   return (
-    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '0 12px' }}>
+    <>
       <AdminHeader />
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <main className="container">
+      <header className="pageHeader">
         <h2>Admin Dashboard</h2>
-        <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <nav className="pageNav">
           <Link href="/">Home</Link>
-          <Link href="/pending">Pending</Link>
-          <Link href="/approved">Approved</Link>
-          <Link href="/rejected">Rejected</Link>
           <Link href="/manage/election-range">Election range</Link>
-          {user && <span style={{ color: '#666' }}>Logged in as {user.email}</span>}
+          {user && <span className="muted">Logged in as {user.email}</span>}
         </nav>
       </header>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+      <div className="gridCards">
         <Card title="Pending" count={pendingCount ?? 0} link="/pending" rows={pending ?? []} />
         <Card title="Approved" count={approvedCount ?? 0} link="/approved" rows={approved ?? []} />
         <Card title="Rejected" count={rejectedCount ?? 0} link="/rejected" rows={rejected ?? []} />
       </div>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 24 }}>
+      <div className="gridCards" style={{ marginTop: 24 }}>
         <SimpleCard
           title="Elected Officials"
           count={electedCount ?? 0}
@@ -186,20 +184,21 @@ export default async function Dashboard() {
           getLabel={(r) => `${r.title ?? 'Untitled'}${r.is_active ? ' (active)' : ''}`}
         />
       </div>
-    </main>
+      </main>
+    </>
   );
   } catch (err: any) {
-    if (err?.digest === 'NEXT_REDIRECT' || err?.digest === 'NEXT_NOT_FOUND') throw err;
+    if (String(err?.digest ?? '').startsWith('NEXT_REDIRECT') || String(err?.digest ?? '').startsWith('NEXT_NOT_FOUND')) throw err;
     const message = err?.message ?? String(err);
     const details = err?.details ?? err?.hint ?? '';
     return (
-      <main style={{ maxWidth: 720, margin: '40px auto', padding: 24 }}>
-        <h2 style={{ color: '#c00' }}>Dashboard error</h2>
-        <p style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 12, borderRadius: 8 }}>
+      <main className="errorPanel card">
+        <h2>Dashboard error</h2>
+        <p className="errorCode">
           {message}
           {details ? `\n${details}` : ''}
         </p>
-        <p style={{ color: '#666', marginTop: 16 }}>
+        <p className="muted">
           Check server logs for full stack. Common causes: missing .env.local (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY),
           or a view/table missing in the api schema (candidate_profiles_pending, candidate_profiles_admin, app_users_admin, active_elected, etc.).
         </p>

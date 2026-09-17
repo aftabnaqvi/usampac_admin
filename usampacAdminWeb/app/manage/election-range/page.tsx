@@ -56,51 +56,39 @@ export default async function ElectionRangePage() {
   const current = await getElectionRange();
 
   return (
-    <main style={{ maxWidth: 720, margin: '0 auto', padding: '0 12px' }}>
+    <>
       <AdminHeader />
-      <header style={{ margin: '16px 0 20px' }}>
-        <h2>Election Range</h2>
-        <p style={{ color: '#555', marginTop: 4 }}>
-          This controls the <strong>ELECTION YYYY-YYYY</strong> text shown on the USAMPAC mobile app home screen.
-        </p>
+      <main className="container narrow">
+      <header className="pageHeader">
+        <div>
+          <h2>Election Range</h2>
+          <p className="muted" style={{ margin: '6px 0 0' }}>
+            This controls the <strong>ELECTION YYYY-YYYY</strong> text shown on the USAMPAC mobile app home screen.
+          </p>
+        </div>
       </header>
 
-      <section
-        style={{
-          border: '1px solid #eee',
-          borderRadius: 8,
-          padding: 16
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>Configure current cycle</h3>
-        <form action={saveElectionRange} style={{ display: 'grid', gap: 8, maxWidth: 360 }}>
-          <label style={{ fontSize: 14, color: '#444' }}>Election range (e.g. 2026-2028)</label>
+      <section className="card">
+        <h3 className="cardTitle">Configure current cycle</h3>
+        <form action={saveElectionRange} className="formGrid" style={{ maxWidth: 360 }}>
+          <label>Election range (e.g. 2026-2028)</label>
           <input
             name="election_range"
             defaultValue={current}
             placeholder="2026-2028"
-            style={{ padding: 8, borderRadius: 6, border: '1px solid #ddd', fontFamily: 'monospace' }}
+            className="mono"
           />
-          <p style={{ fontSize: 12, color: '#666', margin: '4px 0 8px' }}>
+          <p className="muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
             Use a simple format like <code>2026-2028</code>. The mobile app will automatically show this range under
             the word ELECTION.
           </p>
-          <button
-            type="submit"
-            style={{
-              alignSelf: 'flex-start',
-              padding: '8px 14px',
-              borderRadius: 6,
-              backgroundColor: '#111827',
-              color: 'white',
-              fontWeight: 600
-            }}
-          >
+          <button type="submit" className="btnPrimary btnFit">
             Save
           </button>
         </form>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 

@@ -2,34 +2,47 @@ import Link from 'next/link';
 
 export default function PublicLegalShell({
   title,
+  active,
   children
 }: {
   title: string;
+  active: 'privacy' | 'support';
   children: React.ReactNode;
 }) {
   return (
     <>
       <header className="headerBar">
         <div className="headerInner">
-          <nav className="navLinks">
-            <Link href="/privacy">Privacy Policy</Link>
-            <Link href="/support">Support</Link>
-          </nav>
-          <div className="row" style={{ justifyContent: 'flex-end' }}>
+          <a className="brand" href="https://usampac.org">
+            USAMPAC
+          </a>
+          <div className="navGroups">
+            <div className="navGroup">
+              <Link href="/privacy" className={active === 'privacy' ? 'active' : undefined}>
+                Privacy Policy
+              </Link>
+              <Link href="/support" className={active === 'support' ? 'active' : undefined}>
+                Support
+              </Link>
+            </div>
+          </div>
+          <div className="headerActions">
             <a className="pill" href="https://usampac.org">
               usampac.org
             </a>
           </div>
         </div>
       </header>
-      <main className="container" style={{ maxWidth: 760, paddingTop: 28 }}>
-        <h1 style={{ margin: '0 0 8px', fontSize: 28 }}>{title}</h1>
-        <p className="muted" style={{ margin: '0 0 22px' }}>
-          USAMPAC — American Muslim Public Affairs Committee
-        </p>
-        <article className="card" style={{ lineHeight: 1.65, fontSize: 15 }}>
-          {children}
-        </article>
+      <main className="container narrow">
+        <header className="pageHeader">
+          <div>
+            <h2>{title}</h2>
+            <p className="muted" style={{ margin: '6px 0 0' }}>
+              USAMPAC — American Muslim Public Affairs Committee
+            </p>
+          </div>
+        </header>
+        <article className="card legalCard">{children}</article>
       </main>
     </>
   );

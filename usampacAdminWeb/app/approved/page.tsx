@@ -36,25 +36,23 @@ export default async function Approved({
   const electedIds = new Set<string>((electedRows ?? []).map((r: any) => String(r.id)));
 
   return (
-    <main style={{ maxWidth: 960, margin: '0 auto', padding: '0 12px' }}>
+    <>
       <AdminHeader />
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <main className="container">
+      <header className="pageHeader">
         <h2>Approved Candidates</h2>
-        <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <nav className="pageNav">
           <Link href="/">Home</Link>
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/pending">Pending</Link>
-          <Link href="/rejected">Rejected</Link>
-          <span style={{ color: '#666' }}>Logged in as {user?.email}</span>
+          <span className="muted">Logged in as {user?.email}</span>
         </nav>
       </header>
       {searchParams?.success && (
-        <p style={{ color: 'green' }}>Promoted to elected successfully.</p>
+        <p className="flashOk">Promoted to elected successfully.</p>
       )}
       {searchParams?.error && (
-        <p style={{ color: 'red' }}>Promote failed: {searchParams.error}</p>
+        <p className="flashErr">Promote failed: {searchParams.error}</p>
       )}
-      {error && <p style={{ color: 'red' }}>{error.message}</p>}
+      {error && <p className="flashErr">{error.message}</p>}
       {!error && (!data || data.length === 0) && (
         <p>No approved candidates.</p>
       )}
@@ -78,57 +76,48 @@ export default async function Approved({
         const showCompliance = level === 'FEDERAL' || level === 'STATE';
         const isElected = electedIds.has(String(row.user_id));
         return (
-        <article key={row.user_id} style={{ border: '1px solid #eee', padding: 16, borderRadius: 8, marginBottom: 12 }}>
+        <article key={row.user_id} className="card">
               <>
-                <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                <div className="row" style={{ alignItems: 'flex-start' }}>
                   {row.photo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={row.photo_url} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                    <img src={row.photo_url} alt="" className="avatar" />
                   ) : (
-                    <div style={{ width: 56, height: 56, borderRadius: 8, background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 24, flexShrink: 0 }}>?</div>
+                    <div className="avatarFallback">?</div>
                   )}
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="row">
                     <h3 style={{ margin: 0 }}>{row.display_name ?? row.email ?? 'Candidate'}</h3>
                     {isElected && (
-                      <span
-                        style={{
-                          fontSize: 12,
-                          padding: '3px 8px',
-                          borderRadius: 999,
-                          background: 'rgba(46, 204, 113, 0.18)',
-                          border: '1px solid rgba(46, 204, 113, 0.35)',
-                          color: '#2ecc71'
-                        }}
-                      >
+                      <span className="badge">
                         Promoted
                       </span>
                     )}
                   </div>
-                  <div style={{ color: '#666', marginTop: 4 }}>
+                  <div className="muted" style={{ marginTop: 4 }}>
                     {(row.office_level ?? row.office_type ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
                     | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Election Year: {(row.cycle ?? '-')}
                   </div>
                   {showCompliance && (
-                    <div style={{ marginTop: 10, padding: '10px 12px', background: '#f8f9fa', borderRadius: 6, fontSize: 14 }}>
-                      <strong style={{ color: '#333' }}>Filing / compliance</strong>
+                    <div className="complianceBox">
+                      <strong>Filing / compliance</strong>
                       {complianceLines.map(({ label, value }) => (
                         <div key={label} style={{ marginTop: 4 }}>
-                          <span style={{ color: '#555' }}>{label}:</span>{' '}
-                          <span style={{ fontFamily: 'monospace', fontWeight: 600, color: value === 'Not provided' ? '#c00' : '#1a1a1a' }}>{value}</span>
+                          <span className="muted">{label}:</span>{' '}
+                          <span className={value === 'Not provided' ? 'mono missing' : 'mono'}>{value}</span>
                         </div>
                       ))}
                     </div>
                   )}
                   {row.reviewer_notes && (
-                    <div style={{ color: '#444', marginTop: 6 }}>Notes: {row.reviewer_notes}</div>
+                    <div style={{ marginTop: 6 }}>Notes: {row.reviewer_notes}</div>
                   )}
                   {row.approved_at && (
-                    <div style={{ color: '#444', marginTop: 4 }}>Approved at: {new Date(row.approved_at).toLocaleString()}</div>
+                    <div className="muted" style={{ marginTop: 4 }}>Approved at: {new Date(row.approved_at).toLocaleString()}</div>
                   )}
                 </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <div className="row" style={{ marginTop: 10 }}>
                   <form
                     action={async (fd: FormData) => {
                       'use server';
@@ -136,17 +125,17 @@ export default async function Approved({
                       const notes = String(fd.get('notes') || '');
                       await promoteCandidateToElected(uid, notes || undefined);
                     }}
+                    className="formInline"
                   >
                     <input type="hidden" name="user_id" value={row.user_id} />
                     <input
                       name="notes"
                       placeholder="Promotion notes (optional)"
-                      style={{ padding: 8, border: '1px solid #ddd', borderRadius: 6, marginRight: 6 }}
                       disabled={isElected}
                     />
                     <button
                       type="submit"
-                      style={{ padding: '8px 12px', borderRadius: 6, opacity: isElected ? 0.55 : 1 }}
+                      className="btnPrimary"
                       disabled={isElected}
                       title={isElected ? 'Already promoted to elected' : 'Promote to elected'}
                     >
@@ -159,15 +148,16 @@ export default async function Approved({
         );
       })}
     </main>
+    </>
   );
   } catch (err: any) {
-    if (err?.digest === 'NEXT_REDIRECT' || err?.digest === 'NEXT_NOT_FOUND') throw err;
+    if (String(err?.digest ?? '').startsWith('NEXT_REDIRECT') || String(err?.digest ?? '').startsWith('NEXT_NOT_FOUND')) throw err;
     const message = err?.message ?? String(err);
     return (
-      <main style={{ maxWidth: 720, margin: '40px auto', padding: 24 }}>
-        <h2 style={{ color: '#c00' }}>Approved page error</h2>
-        <p style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 12, borderRadius: 8 }}>{message}</p>
-        <p style={{ color: '#666', marginTop: 16 }}>
+      <main className="errorPanel card">
+        <h2>Approved page error</h2>
+        <p className="errorCode">{message}</p>
+        <p className="muted">
           Check .env.local and that api.candidate_profiles_admin and api.active_elected exist in Supabase.
         </p>
       </main>
