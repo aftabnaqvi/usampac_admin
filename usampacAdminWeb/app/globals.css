@@ -524,6 +524,7 @@ a.btnPrimary:hover {
 }
 
 .table .thumb,
+.table .avatar,
 .table .avatarFallback {
   width: 44px;
   height: 44px;
