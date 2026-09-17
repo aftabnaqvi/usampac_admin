@@ -219,8 +219,21 @@ a.btnPrimary:hover {
 .tableWrap {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow: auto;
   background: var(--surface);
+}
+
+.card .tableWrap {
+  margin-top: 10px;
+}
+
+.card .table {
+  margin-top: 0;
+}
+
+.dashSections {
+  display: grid;
+  gap: 16px;
 }
 
 .headerBar {
