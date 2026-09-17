@@ -15,9 +15,11 @@ export default async function AdminHeader() {
         <div className="headerActions">
           <span className="pill">{user ? user.email : 'Not signed in'}</span>
           {user ? (
-            <Link className="pill" href="/logout">
-              Sign out
-            </Link>
+            <form action="/logout" method="POST">
+              <button type="submit" className="pill">
+                Sign out
+              </button>
+            </form>
           ) : (
             <Link className="pill" href="/login">
               Login

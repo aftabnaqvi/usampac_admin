@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { clearAuthCookies } from '@/lib/clearAuthCookies';
 import { AUTH_COOKIE_OPTIONS, expireAuthCookies } from '@/lib/authCookies';
 
-export async function GET(request: Request) {
-  const response = NextResponse.redirect(new URL('/login', request.url));
+function expireAllAuthCookies(request: Request, response: NextResponse) {
   expireAuthCookies({
     set: (name, value, options) => response.cookies.set(name, value, options)
   });
@@ -12,10 +10,15 @@ export async function GET(request: Request) {
       response.cookies.set(cookieName, '', { ...AUTH_COOKIE_OPTIONS, maxAge: 0 });
     }
   }
-  try {
-    clearAuthCookies();
-  } catch {
-    // Route handler still expires cookies on the redirect response.
-  }
+}
+
+export async function POST(request: Request) {
+  const response = NextResponse.redirect(new URL('/login', request.url), 303);
+  expireAllAuthCookies(request, response);
   return response;
+}
+
+export async function GET(request: Request) {
+  // Prefetch of <Link href="/logout"> must not sign the user out.
+  return NextResponse.redirect(new URL('/dashboard', request.url));
 }

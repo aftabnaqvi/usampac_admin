@@ -329,6 +329,15 @@ a.btnPrimary:hover {
   text-decoration: none;
 }
 
+.headerBar form {
+  margin: 0;
+}
+
+.headerBar button.pill {
+  cursor: pointer;
+  font: inherit;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;
