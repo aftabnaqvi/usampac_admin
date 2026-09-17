@@ -3,6 +3,8 @@ import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
+import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
+import ListSearch from '@/app/components/ListSearch';
 
 type NotificationRow = {
   id: string;
@@ -93,8 +95,14 @@ async function deleteNotification(formData: FormData) {
   revalidatePath('/notifications');
 }
 
-export default async function NotificationsPage() {
+export default async function NotificationsPage({
+  searchParams
+}: {
+  searchParams?: { q?: string };
+}) {
   const rows = await getData();
+  const query = listSearchQuery(searchParams?.q);
+  const filtered = rows.filter((n) => matchesListQuery({ display_name: n.title, office_name: n.body, email: n.url }, query));
 
   return (
     <>
@@ -103,6 +111,7 @@ export default async function NotificationsPage() {
       <header className="pageHeader">
         <h2>Notifications</h2>
       </header>
+      <ListSearch action="/notifications" query={query} placeholder="Search notifications" />
 
       <section className="card">
         <h3 className="cardTitle">Create new notification</h3>
@@ -137,9 +146,9 @@ export default async function NotificationsPage() {
         </form>
       </section>
 
-      {rows.length === 0 && <p>No notifications yet.</p>}
+      {filtered.length === 0 && <p>{query ? 'No notifications match that search.' : 'No notifications yet.'}</p>}
 
-      {rows.map((n) => (
+      {filtered.map((n) => (
         <section key={n.id} className="card">
           <div className="row" style={{ alignItems: 'flex-start' }}>
             <form

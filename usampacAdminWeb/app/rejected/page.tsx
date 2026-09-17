@@ -3,13 +3,19 @@ import Link from 'next/link';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
+import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
+import ListSearch from '@/app/components/ListSearch';
 
 function photoUrlOf(row: any): string | null {
   const value = row?.photo_url ?? row?.photo ?? row?.image_url;
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-export default async function Rejected() {
+export default async function Rejected({
+  searchParams
+}: {
+  searchParams?: { q?: string };
+}) {
   const { supabase, user } = await getServerUser();
   const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
   if (!user) {
@@ -41,6 +47,8 @@ export default async function Rejected() {
       photoUrlOf(row) ? row : { ...row, photo_url: photoById.get(String(row.user_id)) ?? row.photo_url }
     );
   }
+  const query = listSearchQuery(searchParams?.q);
+  rows = rows.filter((row: any) => matchesListQuery(row, query));
 
   return (
     <>
@@ -53,9 +61,15 @@ export default async function Rejected() {
           <span className="muted">Logged in as {user?.email}</span>
         </nav>
       </header>
+      <ListSearch action="/rejected" query={query} placeholder="Search by name, office, city, state, or year" />
+      {query && (
+        <p className="muted" style={{ marginTop: -8 }}>
+          Showing {rows.length} result{rows.length === 1 ? '' : 's'} for “{query}”.
+        </p>
+      )}
       {error && <p className="flashErr">{error.message}</p>}
       {!error && rows.length === 0 && (
-        <p>No rejected candidates.</p>
+        <p>{query ? 'No rejected candidates match that search.' : 'No rejected candidates.'}</p>
       )}
       {rows.map((row: any) => {
         const name = row.display_name ?? row.email ?? 'Candidate';

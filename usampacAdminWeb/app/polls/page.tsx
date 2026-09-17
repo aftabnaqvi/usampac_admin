@@ -3,6 +3,8 @@ import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
+import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
+import ListSearch from '@/app/components/ListSearch';
 
 function slugify(input: string): string {
   return (
@@ -193,8 +195,14 @@ async function deleteOption(formData: FormData) {
   revalidatePath('/polls');
 }
 
-export default async function PollsPage() {
+export default async function PollsPage({
+  searchParams
+}: {
+  searchParams?: { q?: string };
+}) {
   const { polls, optionsByPoll, resultsByPoll } = await getData();
+  const query = listSearchQuery(searchParams?.q);
+  const filtered = polls.filter((poll) => matchesListQuery({ display_name: poll.title, office_name: poll.subtitle }, query));
 
   return (
     <>
@@ -203,6 +211,7 @@ export default async function PollsPage() {
       <header className="pageHeader">
         <h2>Polls</h2>
       </header>
+      <ListSearch action="/polls" query={query} placeholder="Search polls" />
 
       <section className="card" style={{ marginBottom: 18 }}>
         <h3 className="cardTitle">Create new poll</h3>
@@ -230,9 +239,9 @@ export default async function PollsPage() {
         </form>
       </section>
 
-      {polls.length === 0 && <p>No polls yet.</p>}
+      {filtered.length === 0 && <p>{query ? 'No polls match that search.' : 'No polls yet.'}</p>}
 
-      {polls.map((poll) => (
+      {filtered.map((poll) => (
         <section key={poll.id} className="card" style={{ marginBottom: 16 }}>
           <div className="row" style={{ alignItems: 'flex-end' }}>
             <form

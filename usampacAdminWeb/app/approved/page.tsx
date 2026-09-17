@@ -5,11 +5,13 @@ import AdminHeader from '@/app/components/AdminHeader';
 import { promoteCandidateToElected } from './actions';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
+import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
+import ListSearch from '@/app/components/ListSearch';
 
 export default async function Approved({
   searchParams
 }: {
-  searchParams?: { success?: string; error?: string };
+  searchParams?: { success?: string; error?: string; q?: string };
 }) {
   try {
     const { supabase, user } = await getServerUser();
@@ -26,6 +28,8 @@ export default async function Approved({
     .from('candidate_profiles_admin')
     .select('*')
     .eq('approval_status', 'approved');
+    const query = listSearchQuery(searchParams?.q);
+    const rows = (data ?? []).filter((row: any) => matchesListQuery(row, query));
 
   // Also fetch current elected ids so we can mark “Promoted” in the approved list.
   const { data: electedRows } = await (db as any)
@@ -45,6 +49,12 @@ export default async function Approved({
           <span className="muted">Logged in as {user?.email}</span>
         </nav>
       </header>
+      <ListSearch action="/approved" query={query} placeholder="Search by name, office, city, state, or year" />
+      {query && (
+        <p className="muted" style={{ marginTop: -8 }}>
+          Showing {rows.length} result{rows.length === 1 ? '' : 's'} for “{query}”.
+        </p>
+      )}
       {searchParams?.success && (
         <p className="flashOk">Promoted to elected successfully.</p>
       )}
@@ -52,10 +62,10 @@ export default async function Approved({
         <p className="flashErr">Promote failed: {searchParams.error}</p>
       )}
       {error && <p className="flashErr">{error.message}</p>}
-      {!error && (!data || data.length === 0) && (
-        <p>No approved candidates.</p>
+      {!error && rows.length === 0 && (
+        <p>{query ? 'No approved candidates match that search.' : 'No approved candidates.'}</p>
       )}
-      {data?.map((row: any) => {
+      {rows.map((row: any) => {
         const level = String(row.office_level ?? row.office_type ?? row.level ?? '').trim().toUpperCase();
         const stateCode = (row.state_code ?? '').toUpperCase();
         const fec = row.fec_filing_number?.trim?.() ?? '';

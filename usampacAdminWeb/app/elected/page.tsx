@@ -2,6 +2,8 @@ import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
+import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
+import ListSearch from '@/app/components/ListSearch';
 
 function photoUrlOf(row: any): string | null {
   const value = row?.photo_url ?? row?.photo ?? row?.image_url;
@@ -18,7 +20,11 @@ function CandidateAvatar({ url, name }: { url: string | null; name: string }) {
   return <div className="avatarFallback">{(name.trim()[0] || '?').toUpperCase()}</div>;
 }
 
-export default async function ElectedOfficialsPage() {
+export default async function ElectedOfficialsPage({
+  searchParams
+}: {
+  searchParams?: { q?: string };
+}) {
   const DEFAULT_TERM_YEARS = 4;
 
   const yearFrom = (raw: any): number | null => {
@@ -104,6 +110,9 @@ export default async function ElectedOfficialsPage() {
     rows = (rows ?? []).map((r) => (photoUrlOf(r) ? r : { ...r, photo_url: photoById.get(String(r.id)) ?? r.photo_url }));
   }
 
+  const query = listSearchQuery(searchParams?.q);
+  const filtered = (rows ?? []).filter((row) => matchesListQuery(row, query));
+
   return (
     <>
       <AdminHeader />
@@ -113,9 +122,11 @@ export default async function ElectedOfficialsPage() {
           <h2>Elected Officials</h2>
           <p className="muted" style={{ margin: '6px 0 0' }}>
             Total: <strong>{count ?? (rows?.length ?? 0)}</strong>
+            {query ? ` · Showing ${filtered.length} match${filtered.length === 1 ? '' : 'es'} for “${query}”` : ''}
           </p>
         </div>
       </header>
+      <ListSearch action="/elected" query={query} placeholder="Search by name, office, party, city, or state" />
 
       {error && (
         <p className="flashErr">
@@ -139,7 +150,7 @@ export default async function ElectedOfficialsPage() {
               </tr>
             </thead>
             <tbody>
-              {(rows ?? []).map((r: any) => {
+              {filtered.map((r: any) => {
                 const name = r.candidate_name ?? 'Elected';
                 return (
                 <tr key={r.id}>
@@ -163,10 +174,10 @@ export default async function ElectedOfficialsPage() {
                 </tr>
                 );
               })}
-              {(!rows || rows.length === 0) && (
+              {filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="muted">
-                    No elected officials found.
+                    {query ? 'No elected officials match that search.' : 'No elected officials found.'}
                   </td>
                 </tr>
               )}

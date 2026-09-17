@@ -469,6 +469,14 @@ a.btnPrimary:hover {
   min-width: 180px;
 }
 
+.listSearch {
+  margin: 0 0 18px;
+}
+
+.listSearch input {
+  max-width: 420px;
+}
+
 .pageNav {
   display: flex;
   gap: 12px;

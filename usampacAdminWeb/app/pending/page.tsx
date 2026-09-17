@@ -5,8 +5,14 @@ import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
+import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
+import ListSearch from '@/app/components/ListSearch';
 
-export default async function Pending() {
+export default async function Pending({
+  searchParams
+}: {
+  searchParams?: { q?: string };
+}) {
   try {
     const { supabase, user } = await getServerUser();
     const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
@@ -19,9 +25,11 @@ export default async function Pending() {
       if (!ok) redirectToLogin('/pending');
     } catch {}
 
+    const query = listSearchQuery(searchParams?.q);
     const { data, error } = await (db as any)
       .from('candidate_profiles_pending')
       .select('*');
+    const rows = (data ?? []).filter((row: any) => matchesListQuery(row, query));
 
     return (
     <>
@@ -34,11 +42,17 @@ export default async function Pending() {
           {user && <span className="muted">Logged in as {user.email}</span>}
         </nav>
       </header>
-      {error && <p className="flashErr">{error.message}</p>}
-      {!error && (!data || data.length === 0) && (
-        <p>No pending candidates.</p>
+      <ListSearch action="/pending" query={query} placeholder="Search by name, office, city, state, or year" />
+      {query && (
+        <p className="muted" style={{ marginTop: -8 }}>
+          Showing {rows.length} result{rows.length === 1 ? '' : 's'} for “{query}”.
+        </p>
       )}
-      {data?.map((row: any) => {
+      {error && <p className="flashErr">{error.message}</p>}
+      {!error && rows.length === 0 && (
+        <p>{query ? 'No pending candidates match that search.' : 'No pending candidates.'}</p>
+      )}
+      {rows.map((row: any) => {
         const level = String(row.office_level ?? row.office_type ?? row.level ?? '').trim().toUpperCase();
         const stateCode = (row.state_code ?? '').toUpperCase();
         const fec = row.fec_filing_number?.trim?.() ?? '';

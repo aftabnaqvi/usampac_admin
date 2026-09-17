@@ -3,6 +3,8 @@ import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
+import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
+import ListSearch from '@/app/components/ListSearch';
 
 function slugify(input: string): string {
   return (
@@ -209,8 +211,14 @@ async function deleteOption(formData: FormData) {
   revalidatePath('/quiz');
 }
 
-export default async function QuizPage() {
+export default async function QuizPage({
+  searchParams
+}: {
+  searchParams?: { q?: string };
+}) {
   const { questions, optionsByQuestion } = await getData();
+  const query = listSearchQuery(searchParams?.q);
+  const filtered = questions.filter((q) => matchesListQuery({ display_name: q.prompt, office_name: q.explanation }, query));
 
   return (
     <>
@@ -219,6 +227,7 @@ export default async function QuizPage() {
       <header className="pageHeader">
         <h2>Quiz Questions</h2>
       </header>
+      <ListSearch action="/quiz" query={query} placeholder="Search quiz questions" />
 
       <section className="card">
         <h3 className="cardTitle">Create new question</h3>
@@ -254,10 +263,10 @@ export default async function QuizPage() {
         </form>
       </section>
 
-      {questions.length === 0 && <p>No questions yet.</p>}
+      {filtered.length === 0 && <p>{query ? 'No questions match that search.' : 'No questions yet.'}</p>}
 
       {/* Bulk delete selected questions */}
-      {questions.length > 0 && (
+      {filtered.length > 0 && (
         <form
           id="bulkDeleteForm"
           action={bulkDeleteQuestions}
@@ -271,7 +280,7 @@ export default async function QuizPage() {
         </form>
       )}
 
-      {questions.map((q) => (
+      {filtered.map((q) => (
         <section key={q.id} className="card">
           <div className="row" style={{ alignItems: 'flex-start' }}>
             <div style={{ paddingTop: 4 }}>

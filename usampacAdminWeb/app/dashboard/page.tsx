@@ -4,6 +4,8 @@ import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
+import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
+import ListSearch from '@/app/components/ListSearch';
 
 function CandidatePhoto({ url, name }: { url?: string | null; name: string }) {
   if (url) {
@@ -69,7 +71,11 @@ function DashTable({
   );
 }
 
-export default async function Dashboard() {
+export default async function Dashboard({
+  searchParams
+}: {
+  searchParams?: { q?: string };
+}) {
   try {
     const { supabase, user } = await getServerUser();
 
@@ -175,6 +181,15 @@ export default async function Dashboard() {
       [r.city_name, r.state_code].filter(Boolean).join(', ') || '—';
 
     const candidateName = (r: any) => r.display_name ?? r.email ?? 'Candidate';
+    const query = listSearchQuery(searchParams?.q);
+    const qLink = (href: string) => (query ? `${href}?q=${encodeURIComponent(query)}` : href);
+    const pendingRows = (pending ?? []).filter((r: any) => matchesListQuery(r, query));
+    const approvedRows = (approved ?? []).filter((r: any) => matchesListQuery(r, query));
+    const rejectedRows = (rejected ?? []).filter((r: any) => matchesListQuery(r, query));
+    const electedRows = (elected ?? []).filter((r: any) => matchesListQuery(r, query));
+    const pollRows = (polls ?? []).filter((r: any) => matchesListQuery({ display_name: r.title }, query));
+    const quizRows = (quizQuestions ?? []).filter((r: any) => matchesListQuery({ display_name: r.prompt }, query));
+    const notifRows = (notifications ?? []).filter((r: any) => matchesListQuery({ display_name: r.title }, query));
 
     return (
       <>
@@ -188,14 +203,15 @@ export default async function Dashboard() {
               {user && <span className="muted">Logged in as {user.email}</span>}
             </nav>
           </header>
+          <ListSearch action="/dashboard" query={query} placeholder="Search candidates, officials, polls, or notices" />
           <div className="dashSections">
             <DashTable
               title="Pending"
               count={pendingCount ?? 0}
-              link="/pending"
+              link={qLink('/pending')}
               linkLabel="View all"
               columns={['Photo', 'Name', 'Office', 'Location', 'Election Year']}
-              rows={(pending ?? []).map((r: any) => {
+              rows={pendingRows.map((r: any) => {
                 const name = candidateName(r);
                 return [
                   <CandidatePhoto key={`p-${r.user_id}`} url={r.photo_url} name={name} />,
@@ -209,10 +225,10 @@ export default async function Dashboard() {
             <DashTable
               title="Approved"
               count={approvedCount ?? 0}
-              link="/approved"
+              link={qLink('/approved')}
               linkLabel="View all"
               columns={['Photo', 'Name', 'Office', 'Location', 'Election Year']}
-              rows={(approved ?? []).map((r: any) => {
+              rows={approvedRows.map((r: any) => {
                 const name = candidateName(r);
                 return [
                   <CandidatePhoto key={`a-${r.user_id}`} url={r.photo_url} name={name} />,
@@ -226,10 +242,10 @@ export default async function Dashboard() {
             <DashTable
               title="Rejected"
               count={rejectedCount ?? 0}
-              link="/rejected"
+              link={qLink('/rejected')}
               linkLabel="View all"
               columns={['Photo', 'Name', 'Office', 'Location', 'Election Year']}
-              rows={(rejected ?? []).map((r: any) => {
+              rows={rejectedRows.map((r: any) => {
                 const name = candidateName(r);
                 return [
                   <CandidatePhoto key={`r-${r.user_id}`} url={r.photo_url} name={name} />,
@@ -243,10 +259,10 @@ export default async function Dashboard() {
             <DashTable
               title="Elected Officials"
               count={electedCount ?? 0}
-              link="/elected"
+              link={qLink('/elected')}
               linkLabel="Manage"
               columns={['Photo', 'Name', 'Office', 'Level', 'Term']}
-              rows={(elected ?? []).map((r: any) => {
+              rows={electedRows.map((r: any) => {
                 const name = r.candidate_name ?? 'Elected';
                 return [
                   <CandidatePhoto key={`e-${r.id}`} url={r.photo_url} name={name} />,
@@ -263,7 +279,7 @@ export default async function Dashboard() {
               link="/polls"
               linkLabel="Manage"
               columns={['Title', 'Status', 'Created']}
-              rows={(polls ?? []).map((r: any) => [
+              rows={pollRows.map((r: any) => [
                 r.title ?? 'Untitled',
                 r.is_active ? 'Active' : 'Inactive',
                 r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'
@@ -275,7 +291,7 @@ export default async function Dashboard() {
               link="/quiz"
               linkLabel="Manage"
               columns={['Prompt', 'Position', 'Status']}
-              rows={(quizQuestions ?? []).map((r: any) => [
+              rows={quizRows.map((r: any) => [
                 (r.prompt ?? 'Untitled').slice(0, 80),
                 r.position ?? '—',
                 r.is_active ? 'Active' : 'Inactive'
@@ -287,7 +303,7 @@ export default async function Dashboard() {
               link="/notifications"
               linkLabel="Manage"
               columns={['Title', 'Status', 'Published']}
-              rows={(notifications ?? []).map((r: any) => [
+              rows={notifRows.map((r: any) => [
                 r.title ?? 'Untitled',
                 r.is_active ? 'Active' : 'Inactive',
                 r.published_at ? new Date(r.published_at).toLocaleDateString() : '—'

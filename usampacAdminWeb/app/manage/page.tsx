@@ -4,6 +4,7 @@ import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
 import { deleteCandidate, deleteElected, restoreCandidate, restoreElected } from './actions';
 import ConfirmButton from './ConfirmButton';
+import ListSearch from '@/app/components/ListSearch';
 
 export default async function ManagePage({
   searchParams
@@ -120,14 +121,11 @@ export default async function ManagePage({
       )}
       {searchParams?.error && <p className="flashErr">Action failed: {searchParams.error}</p>}
 
-      <form method="get" className="formInline" style={{ margin: '12px 0 18px' }}>
-        <input
-          name="q"
-          defaultValue={query}
-          placeholder="Search candidates or elected officials..."
-        />
-        <button type="submit" className="btnPrimary">Search</button>
-      </form>
+      <ListSearch
+        action="/manage"
+        query={query}
+        placeholder="Search candidates or elected officials..."
+      />
 
       <section className="sectionBlock" style={{ marginTop: 18 }}>
         <h3>Candidates</h3>
