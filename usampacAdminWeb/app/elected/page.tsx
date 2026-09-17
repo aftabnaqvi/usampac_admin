@@ -60,40 +60,42 @@ export default async function ElectedOfficialsPage({
 
   const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
-  const electedSelect = 'id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end,email,phone,photo_url';
+  const attempts = [
+    {
+      table: 'active_elected_public',
+      cols: 'id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end,email,phone,photo_url'
+    },
+    {
+      table: 'active_elected_public',
+      cols: 'id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end,photo_url'
+    },
+    {
+      table: 'active_elected',
+      cols: 'id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end,photo_url'
+    },
+    {
+      table: 'active_elected',
+      cols: 'id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end'
+    }
+  ];
+
   let rows: any[] | null = null;
   let error: any = null;
   let count: number | null = null;
 
-  const attemptPublic = await db
-    .from('active_elected_public')
-    .select(electedSelect, { count: 'exact' })
-    .order('candidate_name', { ascending: true })
-    .limit(5000);
-
-  if (!attemptPublic.error) {
-    rows = attemptPublic.data ?? null;
-    count = attemptPublic.count ?? null;
-  } else {
-    const attemptFallback = await db
-      .from('active_elected')
-      .select(electedSelect, { count: 'exact' })
+  for (const attempt of attempts) {
+    const result = await db
+      .from(attempt.table)
+      .select(attempt.cols, { count: 'exact' })
       .order('candidate_name', { ascending: true })
       .limit(5000);
-    if (!attemptFallback.error) {
-      rows = attemptFallback.data ?? null;
+    if (!result.error) {
+      rows = result.data ?? null;
+      count = result.count ?? null;
       error = null;
-      count = attemptFallback.count ?? null;
-    } else {
-      const attemptNoPhoto = await db
-        .from('active_elected')
-        .select('id,candidate_name,office_name,level,party,jurisdiction_name,state_code,term_start,term_end,email,phone', { count: 'exact' })
-        .order('candidate_name', { ascending: true })
-        .limit(5000);
-      rows = attemptNoPhoto.data ?? null;
-      error = attemptNoPhoto.error ?? null;
-      count = attemptNoPhoto.count ?? null;
+      break;
     }
+    error = result.error;
   }
 
   const missingPhotoIds = (rows ?? []).filter((r) => !photoUrlOf(r)).map((r) => String(r.id));
