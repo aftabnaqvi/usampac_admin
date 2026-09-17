@@ -1,25 +1,43 @@
+import { cache } from 'react';
 import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
+import { supabaseEnv } from '@/lib/supabaseEnv';
+
+export { supabaseEnv } from '@/lib/supabaseEnv';
 
 export function supabaseServer() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    throw new Error(
-      'Missing Supabase env: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local'
-    );
-  }
+  const { url, key } = supabaseEnv();
   const cookieStore = cookies();
-  return createServerComponentClient(
-    { cookies: () => cookieStore },
-    { supabaseUrl: url, supabaseKey: key }
-  );
+  return createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // Server Components cannot persist cookies; middleware does that.
+        }
+      }
+    }
+  });
 }
 
-export async function getServerUser() {
+export const getServerUser = cache(async () => {
   const supabase = supabaseServer();
   const { data } = await supabase.auth.getSession();
-  return { supabase, user: data.session?.user ?? null };
-}
-
-
+  const session = data.session;
+  if (!session?.user?.id) {
+    return { supabase, user: null };
+  }
+  return {
+    supabase,
+    user: {
+      id: session.user.id,
+      email: session.user.email
+    }
+  };
+});

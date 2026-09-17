@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 function MagicSignIn() {
   const searchParams = useSearchParams();
@@ -19,13 +18,14 @@ function MagicSignIn() {
     started.current = true;
 
     (async () => {
-      const supabase = createClientComponentClient();
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: 'magiclink'
+      const res = await fetch('/api/login/magic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token_hash: tokenHash })
       });
-      if (error) {
-        setMessage(error.message || 'Sign-in link failed.');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(data?.error || 'Sign-in link failed.');
         return;
       }
       window.location.assign('/dashboard');

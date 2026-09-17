@@ -1,7 +1,6 @@
 'use client';
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { safeNextPath } from '@/lib/loginRedirect';
 
 function loginErrorMessage(raw: string | undefined) {
@@ -25,10 +24,14 @@ function LoginForm() {
     setErr(null);
     setLoading(true);
     try {
-      const supabase = createClientComponentClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
-      if (error) {
-        setErr(loginErrorMessage(error.message));
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pw })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErr(loginErrorMessage(data?.error));
         return;
       }
       window.location.assign(safeNextPath(searchParams.get('next')));

@@ -1,50 +1,38 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const hasAuthCookie = req.cookies.getAll().some((cookie) => cookie.name.startsWith('sb-'));
-  if (!hasAuthCookie) {
-    return res;
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request });
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    return supabaseResponse;
   }
 
-  const originalAuthCookies = req.cookies.getAll().filter((cookie) => cookie.name.startsWith('sb-'));
-  try {
-    const supabase = createMiddlewareClient({ req, res });
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) {
-      for (const cookie of originalAuthCookies) {
-        res.cookies.set(cookie.name, cookie.value);
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) => {
+          supabaseResponse.cookies.set(name, value, options);
+        });
       }
     }
-  } catch {
-    // Keep existing cookies if refresh fails (rate limit, network, etc.).
-  }
-  return res;
+  });
+
+  // Refresh the session here (and copy cookies onto the request) so Server
+  // Components do not try to refresh the same one-time refresh token.
+  await supabase.auth.getSession();
+
+  return supabaseResponse;
 }
 
 export const config = {
-  matcher: [
-    '/dashboard',
-    '/dashboard/:path*',
-    '/pending',
-    '/pending/:path*',
-    '/approved',
-    '/approved/:path*',
-    '/rejected',
-    '/rejected/:path*',
-    '/elected',
-    '/elected/:path*',
-    '/manage',
-    '/manage/:path*',
-    '/admins',
-    '/admins/:path*',
-    '/polls',
-    '/polls/:path*',
-    '/quiz',
-    '/quiz/:path*',
-    '/notifications',
-    '/notifications/:path*'
-  ]
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']
 };
