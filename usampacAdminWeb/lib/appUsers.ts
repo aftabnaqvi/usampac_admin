@@ -19,7 +19,10 @@ export async function isAdminUser(db: DbClient, userId: string): Promise<boolean
     .eq(idColumn, userId)
     .limit(1)
     .maybeSingle();
-  if (error || !data) return false;
+  if (error) {
+    throw error;
+  }
+  if (!data) return false;
   return data.role === 'ADMIN';
 }
 

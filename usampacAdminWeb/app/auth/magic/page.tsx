@@ -20,6 +20,7 @@ function MagicSignIn() {
     (async () => {
       const res = await fetch('/api/login/magic', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token_hash: tokenHash })
       });

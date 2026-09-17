@@ -1,29 +1,21 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { supabaseEnv } from '@/lib/supabaseEnv';
 import { clearAuthCookies } from '@/lib/clearAuthCookies';
+import { AUTH_COOKIE_OPTIONS, expireAuthCookies } from '@/lib/authCookies';
 
 export async function GET(request: Request) {
-  const cookieStore = cookies();
-  try {
-    const { url, key } = supabaseEnv();
-    const supabase = createServerClient(url, key, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
-        }
-      }
-    });
-    await supabase.auth.signOut({ scope: 'local' });
-  } catch {
-    // Still clear leftover cookies below.
+  const response = NextResponse.redirect(new URL('/login', request.url));
+  expireAuthCookies({
+    set: (name, value, options) => response.cookies.set(name, value, options)
+  });
+  for (const cookieName of request.headers.get('cookie')?.split(';').map((part) => part.trim().split('=')[0]) ?? []) {
+    if (cookieName.startsWith('sb-')) {
+      response.cookies.set(cookieName, '', { ...AUTH_COOKIE_OPTIONS, maxAge: 0 });
+    }
   }
-  clearAuthCookies();
-  return NextResponse.redirect(new URL('/login', request.url));
+  try {
+    clearAuthCookies();
+  } catch {
+    // Route handler still expires cookies on the redirect response.
+  }
+  return response;
 }
