@@ -1,13 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 function loginErrorMessage(raw: string | undefined) {
   const message = (raw || 'Sign in failed').trim();
   const lower = message.toLowerCase();
   if (lower.includes('rate limit') || lower.includes('too many')) {
-    return 'Supabase is still rate-limiting password sign-in from this network. Use the sign-in link if you have one, or wait a few minutes and try once.';
+    return 'Supabase is still rate-limiting password sign-in from this network. Wait a few minutes, then try once.';
   }
   return message;
 }
@@ -17,25 +16,19 @@ export default function Login() {
   const [pw, setPw] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     setLoading(true);
     try {
-      await fetch('/api/clear-auth', { method: 'POST', credentials: 'include' });
-      const supabase = createClientComponentClient({ isSingleton: false });
+      const supabase = createClientComponentClient();
       const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
       if (error) {
         setErr(loginErrorMessage(error.message));
         return;
       }
-      try {
-        router.replace('/dashboard');
-      } catch {
-        window.location.href = '/dashboard';
-      }
+      window.location.assign('/dashboard');
     } catch (e: any) {
       console.error('Login handler error:', e);
       setErr(loginErrorMessage(e?.message));

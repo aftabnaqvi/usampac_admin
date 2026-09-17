@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Suspense } from 'react';
 
 function MagicSignIn() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [message, setMessage] = useState('Signing you in…');
+  const started = useRef(false);
 
   useEffect(() => {
     const tokenHash = searchParams.get('token_hash');
@@ -16,26 +15,22 @@ function MagicSignIn() {
       setMessage('Missing sign-in token.');
       return;
     }
+    if (started.current) return;
+    started.current = true;
 
-    let cancelled = false;
     (async () => {
-      const supabase = createClientComponentClient({ isSingleton: false });
+      const supabase = createClientComponentClient();
       const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: 'magiclink'
       });
-      if (cancelled) return;
       if (error) {
         setMessage(error.message || 'Sign-in link failed.');
         return;
       }
-      router.replace('/dashboard');
+      window.location.assign('/dashboard');
     })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router, searchParams]);
+  }, [searchParams]);
 
   return (
     <main className="loginWrap">
