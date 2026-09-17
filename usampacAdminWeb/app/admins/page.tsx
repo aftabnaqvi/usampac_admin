@@ -3,6 +3,7 @@ import AdminHeader from '@/app/components/AdminHeader';
 import { supabaseServer } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminUser, listAdmins } from '@/lib/appUsers';
+import { redirectToLogin } from '@/lib/loginRedirect';
 import { addAdminByEmail, removeAdminById } from './actions';
 import AddAdminForm from './AddAdminForm';
 import RemoveAdminButton from './RemoveAdminButton';
@@ -17,12 +18,12 @@ export default async function AdminsPage({
     const { data: userRes } = await supabase.auth.getUser();
     const user = userRes.user ?? null;
     if (!user) {
-      redirect('/login');
+      redirectToLogin('/admins');
     }
     try {
       const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
       const ok = await isAdminUser(pub, user.id);
-      if (!ok) redirect('/login');
+      if (!ok) redirectToLogin('/admins');
     } catch (e: any) {
       if (String(e?.digest ?? '').startsWith('NEXT_REDIRECT') || String(e?.digest ?? '').startsWith('NEXT_NOT_FOUND')) throw e;
     }

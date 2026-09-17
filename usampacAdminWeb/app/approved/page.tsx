@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
 import { promoteCandidateToElected } from './actions';
 import { isAdminUser } from '@/lib/appUsers';
+import { redirectToLogin } from '@/lib/loginRedirect';
 
 export default async function Approved({
   searchParams
@@ -16,12 +17,12 @@ export default async function Approved({
     const { data: userRes } = await supabase.auth.getUser();
     const user = userRes.user ?? null;
     if (!user) {
-      redirect('/login');
+      redirectToLogin('/approved');
     }
     try {
       const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
       const ok = await isAdminUser(pub, user.id);
-      if (!ok) redirect('/login');
+      if (!ok) redirectToLogin('/approved');
     } catch {}
     const { data, error } = await (db as any)
     .from('candidate_profiles_admin')

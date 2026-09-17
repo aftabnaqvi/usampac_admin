@@ -1,8 +1,8 @@
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
+import { redirectToLogin } from '@/lib/loginRedirect';
 
 type NotificationRow = {
   id: string;
@@ -17,12 +17,12 @@ async function requireAdmin() {
   const supabase = supabaseServer();
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes.user ?? null;
-  if (!user) redirect('/login');
+  if (!user) redirectToLogin('/notifications');
 
   try {
     const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
     const ok = await isAdminUser(apiClient, user.id);
-    if (!ok) redirect('/login');
+    if (!ok) redirectToLogin('/notifications');
   } catch {
     // rely on RLS if this check fails
   }

@@ -1,7 +1,7 @@
 import { supabaseServer } from '@/lib/supabaseServer';
-import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
+import { redirectToLogin } from '@/lib/loginRedirect';
 import { deleteCandidate, deleteElected, restoreCandidate, restoreElected } from './actions';
 import ConfirmButton from './ConfirmButton';
 
@@ -16,12 +16,12 @@ export default async function ManagePage({
   const { data: userRes } = await supabase.auth.getUser();
   const user = userRes.user ?? null;
   if (!user) {
-    redirect('/login');
+    redirectToLogin('/manage');
   }
   try {
     const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
     const ok = await isAdminUser(pub, user.id);
-    if (!ok) redirect('/login');
+    if (!ok) redirectToLogin('/manage');
   } catch {}
 
   const query = (searchParams?.q ?? '').trim();

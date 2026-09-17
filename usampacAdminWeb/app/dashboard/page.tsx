@@ -3,6 +3,7 @@ import { supabaseServer } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
+import { redirectToLogin } from '@/lib/loginRedirect';
 
 function DashTable({
   title,
@@ -64,12 +65,12 @@ export default async function Dashboard() {
     const user = userRes.user ?? null;
 
     if (!user) {
-      redirect('/login');
+      redirectToLogin('/dashboard');
     }
     try {
       const dbPublic: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
       const ok = await isAdminUser(dbPublic, user.id);
-      if (!ok) redirect('/login');
+      if (!ok) redirectToLogin('/dashboard');
     } catch {
       // rely on RLS if this check fails
     }

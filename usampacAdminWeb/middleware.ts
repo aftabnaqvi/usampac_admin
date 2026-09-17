@@ -16,15 +16,25 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    '/dashboard',
     '/dashboard/:path*',
+    '/pending',
     '/pending/:path*',
+    '/approved',
     '/approved/:path*',
+    '/rejected',
     '/rejected/:path*',
+    '/elected',
     '/elected/:path*',
+    '/manage',
     '/manage/:path*',
+    '/admins',
     '/admins/:path*',
+    '/polls',
     '/polls/:path*',
+    '/quiz',
     '/quiz/:path*',
+    '/notifications',
     '/notifications/:path*'
   ]
 };

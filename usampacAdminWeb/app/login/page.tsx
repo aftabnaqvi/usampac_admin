@@ -1,6 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { safeNextPath } from '@/lib/loginRedirect';
 
 function loginErrorMessage(raw: string | undefined) {
   const message = (raw || 'Sign in failed').trim();
@@ -11,7 +13,8 @@ function loginErrorMessage(raw: string | undefined) {
   return message;
 }
 
-export default function Login() {
+function LoginForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -28,7 +31,7 @@ export default function Login() {
         setErr(loginErrorMessage(error.message));
         return;
       }
-      window.location.assign('/dashboard');
+      window.location.assign(safeNextPath(searchParams.get('next')));
     } catch (e: any) {
       console.error('Login handler error:', e);
       setErr(loginErrorMessage(e?.message));
@@ -66,5 +69,22 @@ export default function Login() {
         {err && <p className="flashErr">{err}</p>}
       </section>
     </main>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense
+      fallback={
+        <main className="loginWrap">
+          <section className="loginCard">
+            <h2>Admin Login</h2>
+            <p className="muted">Loading…</p>
+          </section>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
