@@ -1,4 +1,4 @@
-import { supabaseServer } from '@/lib/supabaseServer';
+import { getServerUser } from '@/lib/supabaseServer';
 import { approveCandidate, rejectCandidate } from './actions';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -8,10 +8,8 @@ import { redirectToLogin } from '@/lib/loginRedirect';
 
 export default async function Pending() {
   try {
-    const supabase = supabaseServer();
+    const { supabase, user } = await getServerUser();
     const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const { data: userRes } = await supabase.auth.getUser();
-    const user = userRes.user ?? null;
     if (!user) {
       redirectToLogin('/pending');
     }

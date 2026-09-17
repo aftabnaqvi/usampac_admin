@@ -1,4 +1,4 @@
-import { supabaseServer } from '@/lib/supabaseServer';
+import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
@@ -24,9 +24,7 @@ export default async function ElectedOfficialsPage() {
     return '—';
   };
 
-  const supabase = supabaseServer();
-  const { data: userRes } = await supabase.auth.getUser();
-  const user = userRes.user ?? null;
+  const { supabase, user } = await getServerUser();
 
   if (!user) {
     redirectToLogin('/elected');

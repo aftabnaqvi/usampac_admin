@@ -9,8 +9,18 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  const supabase = createMiddlewareClient({ req, res });
-  await supabase.auth.getSession();
+  const originalAuthCookies = req.cookies.getAll().filter((cookie) => cookie.name.startsWith('sb-'));
+  try {
+    const supabase = createMiddlewareClient({ req, res });
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      for (const cookie of originalAuthCookies) {
+        res.cookies.set(cookie.name, cookie.value);
+      }
+    }
+  } catch {
+    // Keep existing cookies if refresh fails (rate limit, network, etc.).
+  }
   return res;
 }
 

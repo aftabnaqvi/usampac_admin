@@ -1,14 +1,12 @@
-import { supabaseServer } from '@/lib/supabaseServer';
+import { getServerUser } from '@/lib/supabaseServer';
 import Link from 'next/link';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
 
 export default async function Rejected() {
-  const supabase = supabaseServer();
+  const { supabase, user } = await getServerUser();
   const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-  const { data: userRes } = await supabase.auth.getUser();
-  const user = userRes.user ?? null;
   if (!user) {
     redirectToLogin('/rejected');
   }

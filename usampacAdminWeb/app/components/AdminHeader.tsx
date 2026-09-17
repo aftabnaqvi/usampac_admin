@@ -1,11 +1,9 @@
 import Link from 'next/link';
-import { supabaseServer } from '@/lib/supabaseServer';
 import AdminNav from './AdminNav';
+import { getServerUser } from '@/lib/supabaseServer';
 
 export default async function AdminHeader() {
-  const supabase = supabaseServer();
-  const { data } = await supabase.auth.getUser();
-  const user = data.user ?? null;
+  const { user } = await getServerUser();
 
   return (
     <header className="headerBar">

@@ -1,9 +1,20 @@
 import Link from 'next/link';
-import { supabaseServer } from '@/lib/supabaseServer';
-import { redirect } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
+
+function CandidatePhoto({ url, name }: { url?: string | null; name: string }) {
+  if (url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={url} alt="" className="thumb" />
+    );
+  }
+  const initial = (name.trim()[0] || '?').toUpperCase();
+  return <div className="avatarFallback">{initial}</div>;
+}
 
 function DashTable({
   title,
@@ -18,7 +29,7 @@ function DashTable({
   link: string;
   linkLabel: string;
   columns: string[];
-  rows: (string | number)[][];
+  rows: ReactNode[][];
 }) {
   return (
     <section className="card">
@@ -60,9 +71,7 @@ function DashTable({
 
 export default async function Dashboard() {
   try {
-    const supabase = supabaseServer();
-    const { data: userRes } = await supabase.auth.getUser();
-    const user = userRes.user ?? null;
+    const { supabase, user } = await getServerUser();
 
     if (!user) {
       redirectToLogin('/dashboard');
@@ -84,18 +93,39 @@ export default async function Dashboard() {
     ]);
 
     const [{ data: pending }, { data: approved }, { data: rejected }] = await Promise.all([
-      db.from('candidate_profiles_pending').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle').limit(10),
-      db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at').eq('approval_status', 'approved').limit(10),
-      db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at,reviewer_notes').eq('approval_status', 'rejected').limit(10)
+      db.from('candidate_profiles_pending').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,photo_url').limit(10),
+      db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at,photo_url').eq('approval_status', 'approved').limit(10),
+      db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at,reviewer_notes,photo_url').eq('approval_status', 'rejected').limit(10)
     ]);
 
-    const [{ data: elected, count: electedCount }] = await Promise.all([
-      db
+    const electedSelect = 'id,candidate_name,office_name,level,term_start,term_end,photo_url';
+    const electedPublic = await db
+      .from('active_elected_public')
+      .select(electedSelect, { count: 'exact' })
+      .order('candidate_name', { ascending: true })
+      .limit(10);
+
+    let elected = electedPublic.data ?? [];
+    let electedCount = electedPublic.count ?? 0;
+    if (electedPublic.error) {
+      const electedFallback = await db
         .from('active_elected')
-        .select('id,candidate_name,office_name,level,term_start,term_end', { count: 'exact' })
+        .select(electedSelect, { count: 'exact' })
         .order('candidate_name', { ascending: true })
-        .limit(10)
-    ]);
+        .limit(10);
+      if (!electedFallback.error) {
+        elected = electedFallback.data ?? [];
+        electedCount = electedFallback.count ?? 0;
+      } else {
+        const electedNoPhoto = await db
+          .from('active_elected')
+          .select('id,candidate_name,office_name,level,term_start,term_end', { count: 'exact' })
+          .order('candidate_name', { ascending: true })
+          .limit(10);
+        elected = electedNoPhoto.data ?? [];
+        electedCount = electedNoPhoto.count ?? 0;
+      }
+    }
 
     const [
       { data: polls, error: pollsError, count: pollsCount },
@@ -164,52 +194,68 @@ export default async function Dashboard() {
               count={pendingCount ?? 0}
               link="/pending"
               linkLabel="View all"
-              columns={['Name', 'Office', 'Location', 'Election Year']}
-              rows={(pending ?? []).map((r: any) => [
-                candidateName(r),
-                `${r.office_level ?? '—'} / ${r.office_name ?? '—'}`,
-                location(r),
-                r.cycle ?? '—'
-              ])}
+              columns={['Photo', 'Name', 'Office', 'Location', 'Election Year']}
+              rows={(pending ?? []).map((r: any) => {
+                const name = candidateName(r);
+                return [
+                  <CandidatePhoto key={`p-${r.user_id}`} url={r.photo_url} name={name} />,
+                  name,
+                  `${r.office_level ?? '—'} / ${r.office_name ?? '—'}`,
+                  location(r),
+                  r.cycle ?? '—'
+                ];
+              })}
             />
             <DashTable
               title="Approved"
               count={approvedCount ?? 0}
               link="/approved"
               linkLabel="View all"
-              columns={['Name', 'Office', 'Location', 'Election Year']}
-              rows={(approved ?? []).map((r: any) => [
-                candidateName(r),
-                `${r.office_level ?? '—'} / ${r.office_name ?? '—'}`,
-                location(r),
-                r.cycle ?? '—'
-              ])}
+              columns={['Photo', 'Name', 'Office', 'Location', 'Election Year']}
+              rows={(approved ?? []).map((r: any) => {
+                const name = candidateName(r);
+                return [
+                  <CandidatePhoto key={`a-${r.user_id}`} url={r.photo_url} name={name} />,
+                  name,
+                  `${r.office_level ?? '—'} / ${r.office_name ?? '—'}`,
+                  location(r),
+                  r.cycle ?? '—'
+                ];
+              })}
             />
             <DashTable
               title="Rejected"
               count={rejectedCount ?? 0}
               link="/rejected"
               linkLabel="View all"
-              columns={['Name', 'Office', 'Location', 'Election Year']}
-              rows={(rejected ?? []).map((r: any) => [
-                candidateName(r),
-                `${r.office_level ?? '—'} / ${r.office_name ?? '—'}`,
-                location(r),
-                r.cycle ?? '—'
-              ])}
+              columns={['Photo', 'Name', 'Office', 'Location', 'Election Year']}
+              rows={(rejected ?? []).map((r: any) => {
+                const name = candidateName(r);
+                return [
+                  <CandidatePhoto key={`r-${r.user_id}`} url={r.photo_url} name={name} />,
+                  name,
+                  `${r.office_level ?? '—'} / ${r.office_name ?? '—'}`,
+                  location(r),
+                  r.cycle ?? '—'
+                ];
+              })}
             />
             <DashTable
               title="Elected Officials"
               count={electedCount ?? 0}
               link="/elected"
               linkLabel="Manage"
-              columns={['Name', 'Office', 'Level', 'Term']}
-              rows={(elected ?? []).map((r: any) => [
-                r.candidate_name ?? 'Elected',
-                r.office_name ?? '—',
-                r.level ?? '—',
-                termLabel(r.term_start, r.term_end)
-              ])}
+              columns={['Photo', 'Name', 'Office', 'Level', 'Term']}
+              rows={(elected ?? []).map((r: any) => {
+                const name = r.candidate_name ?? 'Elected';
+                return [
+                  <CandidatePhoto key={`e-${r.id}`} url={r.photo_url} name={name} />,
+                  name,
+                  r.office_name ?? '—',
+                  r.level ?? '—',
+                  termLabel(r.term_start, r.term_end)
+                ];
+              })}
             />
             <DashTable
               title="Polls"

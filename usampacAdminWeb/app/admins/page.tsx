@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
-import { supabaseServer } from '@/lib/supabaseServer';
+import { getServerUser } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { isAdminUser, listAdmins } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
@@ -14,9 +14,7 @@ export default async function AdminsPage({
   searchParams?: { success?: string; error?: string };
 }) {
   try {
-    const supabase = supabaseServer();
-    const { data: userRes } = await supabase.auth.getUser();
-    const user = userRes.user ?? null;
+    const { supabase, user } = await getServerUser();
     if (!user) {
       redirectToLogin('/admins');
     }

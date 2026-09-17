@@ -1,4 +1,4 @@
-import { supabaseServer } from '@/lib/supabaseServer';
+import { getServerUser } from '@/lib/supabaseServer';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
@@ -12,10 +12,8 @@ export default async function Approved({
   searchParams?: { success?: string; error?: string };
 }) {
   try {
-    const supabase = supabaseServer();
+    const { supabase, user } = await getServerUser();
     const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const { data: userRes } = await supabase.auth.getUser();
-    const user = userRes.user ?? null;
     if (!user) {
       redirectToLogin('/approved');
     }

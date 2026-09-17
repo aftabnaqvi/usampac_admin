@@ -49,6 +49,7 @@ export default function AdminNav() {
             <Link
               key={link.href}
               href={link.href}
+              prefetch={false}
               className={isActive(pathname, link.href) ? 'active' : undefined}
             >
               {link.label}

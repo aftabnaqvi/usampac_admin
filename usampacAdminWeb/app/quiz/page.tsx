@@ -1,5 +1,5 @@
 import { revalidatePath } from 'next/cache';
-import { supabaseServer } from '@/lib/supabaseServer';
+import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
@@ -36,9 +36,7 @@ type QuizOption = {
 };
 
 async function requireAdmin() {
-  const supabase = supabaseServer();
-  const { data: userRes } = await supabase.auth.getUser();
-  const user = userRes.user ?? null;
+  const { supabase, user } = await getServerUser();
   if (!user) redirectToLogin('/quiz');
 
   try {

@@ -16,4 +16,10 @@ export function supabaseServer() {
   );
 }
 
+export async function getServerUser() {
+  const supabase = supabaseServer();
+  const { data } = await supabase.auth.getSession();
+  return { supabase, user: data.session?.user ?? null };
+}
+
 
