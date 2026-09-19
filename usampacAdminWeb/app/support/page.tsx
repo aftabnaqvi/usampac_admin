@@ -41,9 +41,18 @@ export default function SupportPage() {
 
       <h2>How to reach us</h2>
       <p>
-        For app problems, listing corrections, or to ask that a profile be removed, use the
-        organization site:
+        For problems with the US-AMPAC iOS app (bugs, account access, listing errors, or to
+        ask that a profile be removed), email{' '}
+        <a href="mailto:naqviasyed@gmail.com?subject=US-AMPAC%20app%20issue">
+          naqviasyed@gmail.com
+        </a>
+        .
       </p>
+      <p>
+        Include the email you use in the app and a short description of the issue. We use that
+        information only to respond to your request.
+      </p>
+      <p>For campaign or organization questions:</p>
       <ul>
         <li>
           <a href="https://usampac.org">usampac.org</a> — home
@@ -52,10 +61,6 @@ export default function SupportPage() {
           <a href="https://usampac.org/about">usampac.org/about</a> — about USAMPAC
         </li>
       </ul>
-      <p>
-        Include the email you use in the app and a short description of the issue. We use that
-        information only to respond to your request.
-      </p>
 
       <h2>Privacy</h2>
       <p>

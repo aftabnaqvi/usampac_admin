@@ -104,7 +104,11 @@ export default function PrivacyPage() {
 
       <h2>Contact</h2>
       <p>
-        Privacy questions: see <a href="/support">Support</a>. Organization website:{' '}
+        Privacy questions or app issues: email{' '}
+        <a href="mailto:naqviasyed@gmail.com?subject=US-AMPAC%20privacy">
+          naqviasyed@gmail.com
+        </a>
+        . You can also use the <a href="/support">Support</a> page. Organization website:{' '}
         <a href="https://usampac.org">usampac.org</a>.
       </p>
     </PublicLegalShell>
