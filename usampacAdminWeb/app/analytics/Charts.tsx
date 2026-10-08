@@ -71,7 +71,17 @@ export function LineChart({
   );
 }
 
-export function StackedLaunchChart({ title, points }: { title: string; points: Point[] }) {
+export function StackedLaunchChart({
+  title,
+  points,
+  guestTotal = 0,
+  candidateTotal = 0
+}: {
+  title: string;
+  points: Point[];
+  guestTotal?: number;
+  candidateTotal?: number;
+}) {
   const w = 640;
   const h = 220;
   const pad = { l: 36, r: 12, t: 16, b: 28 };
@@ -87,29 +97,46 @@ export function StackedLaunchChart({ title, points }: { title: string; points: P
       <figcaption>
         {title}
         <span className="chartLegend">
-          <span className="swatch navy" /> Guest
-          <span className="swatch red" /> Candidate
+          <span className="swatch navy" /> Guest {guestTotal}
+          <span className="swatch red" /> Candidate {candidateTotal}
         </span>
       </figcaption>
       {points.length === 0 ? (
         <p className="muted">No data in this range.</p>
       ) : (
-        <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={title}>
+        <svg
+          viewBox={`0 0 ${w} ${h}`}
+          role="img"
+          aria-label={`${title}: ${guestTotal} guest, ${candidateTotal} candidate`}
+        >
           <line x1={pad.l} y1={pad.t + innerH} x2={pad.l + innerW} y2={pad.t + innerH} className="chartAxis" />
           {points.map((p, i) => {
             const x = pad.l + ((i + 0.5) / n) * innerW - barW / 2;
-            const guestH = ((p.guest ?? 0) / max) * innerH;
-            const candH = ((p.candidate ?? 0) / max) * innerH;
+            const guest = p.guest ?? 0;
+            const candidate = p.candidate ?? 0;
+            const guestH = (guest / max) * innerH;
+            const candH = (candidate / max) * innerH;
             const guestY = pad.t + innerH - guestH;
             const candY = guestY - candH;
+            const labelX = x + barW / 2;
             return (
               <g key={p.day}>
                 <rect x={x} y={guestY} width={barW} height={guestH} fill="#0a1f63">
-                  <title>{`${p.day} guest ${p.guest ?? 0}`}</title>
+                  <title>{`${p.day} guest ${guest}`}</title>
                 </rect>
+                {guestH >= 14 ? (
+                  <text x={labelX} y={guestY + guestH / 2 + 4} textAnchor="middle" className="chartBarLabel">
+                    {guest}
+                  </text>
+                ) : null}
                 <rect x={x} y={candY} width={barW} height={candH} fill="#c41e3a">
-                  <title>{`${p.day} candidate ${p.candidate ?? 0}`}</title>
+                  <title>{`${p.day} candidate ${candidate}`}</title>
                 </rect>
+                {candH >= 14 ? (
+                  <text x={labelX} y={candY + candH / 2 + 4} textAnchor="middle" className="chartBarLabel">
+                    {candidate}
+                  </text>
+                ) : null}
               </g>
             );
           })}

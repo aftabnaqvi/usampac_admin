@@ -582,6 +582,16 @@ a.btnPrimary:hover {
   font-size: 22px;
 }
 
+.analyticsKpis .kpiCandidate {
+  color: var(--red);
+}
+
+.chartBarLabel {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #fff;
+}
+
 .chartGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

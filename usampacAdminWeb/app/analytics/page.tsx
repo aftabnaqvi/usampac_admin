@@ -142,6 +142,16 @@ export default async function AnalyticsPage({
             <p className="muted">Distinct phones in this range</p>
           </div>
           <div className="card">
+            <h3 className="cardTitle">Guest launches</h3>
+            <p className="kpi">{stats.uniqueGuests}</p>
+            <p className="muted">Opened as guest</p>
+          </div>
+          <div className="card">
+            <h3 className="cardTitle">Candidate launches</h3>
+            <p className="kpi kpiCandidate">{stats.uniqueCandidates}</p>
+            <p className="muted">Opened as candidate</p>
+          </div>
+          <div className="card">
             <h3 className="cardTitle">Donate taps</h3>
             <p className="kpi">{stats.donateTaps}</p>
             <p className="muted">USAMPAC + candidate Donate</p>
@@ -162,7 +172,12 @@ export default async function AnalyticsPage({
 
         <section className="chartGrid">
           <LineChart title="Unique launches by day" points={stats.series} />
-          <StackedLaunchChart title="Guest vs candidate launches" points={stats.series} />
+          <StackedLaunchChart
+            title="Guest vs candidate launches"
+            points={stats.series}
+            guestTotal={stats.uniqueGuests}
+            candidateTotal={stats.uniqueCandidates}
+          />
           <LineChart title="Donate taps by day" points={stats.series} color="#c41e3a" valueKey="donate" />
           <BarChart title="Pages opened" bars={stats.pages} />
           <BarChart title="Links tapped" bars={stats.links} color="#c41e3a" />

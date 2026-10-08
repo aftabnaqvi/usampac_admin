@@ -88,6 +88,8 @@ describe('summarizeTelemetry', () => {
     ];
     const stats = summarizeTelemetry(rows, '2026-10-11', '2026-10-11', names);
     assert.equal(stats.uniqueLaunches, 1);
+    assert.equal(stats.uniqueGuests, 1);
+    assert.equal(stats.uniqueCandidates, 0);
     assert.equal(stats.donateTaps, 1);
     assert.equal(stats.topCity, 'Fremont, CA');
     assert.equal(stats.listingRows[0].name, 'Qasim Lodhi');
@@ -103,6 +105,74 @@ describe('summarizeTelemetry', () => {
     assert.equal(stats.series.length, 3);
     assert.equal(stats.series.every((p) => p.value === 0), true);
     assert.equal(stats.uniqueLaunches, 0);
+    assert.equal(stats.uniqueGuests, 0);
+    assert.equal(stats.uniqueCandidates, 0);
+  });
+
+  it('counts guest and candidate launches separately', () => {
+    const guestId = '11111111-1111-1111-1111-111111111111';
+    const candidateId = '22222222-2222-2222-2222-222222222222';
+    const bothId = '33333333-3333-3333-3333-333333333333';
+    const stats = summarizeTelemetry(
+      [
+        {
+          occurred_at: '2026-10-11T16:00:00.000Z',
+          event_name: 'app_open',
+          screen: 'home',
+          install_id: guestId,
+          audience: 'guest',
+          city: 'Fremont',
+          region: 'CA',
+          link_kind: null,
+          target_kind: null,
+          target_id: null
+        },
+        {
+          occurred_at: '2026-10-11T16:10:00.000Z',
+          event_name: 'app_open',
+          screen: 'home',
+          install_id: candidateId,
+          audience: 'candidate',
+          city: 'Oakland',
+          region: 'CA',
+          link_kind: null,
+          target_kind: null,
+          target_id: null
+        },
+        {
+          occurred_at: '2026-10-11T16:20:00.000Z',
+          event_name: 'app_open',
+          screen: 'home',
+          install_id: bothId,
+          audience: 'guest',
+          city: 'San Jose',
+          region: 'CA',
+          link_kind: null,
+          target_kind: null,
+          target_id: null
+        },
+        {
+          occurred_at: '2026-10-11T17:00:00.000Z',
+          event_name: 'app_open',
+          screen: 'home',
+          install_id: bothId,
+          audience: 'candidate',
+          city: 'San Jose',
+          region: 'CA',
+          link_kind: null,
+          target_kind: null,
+          target_id: null
+        }
+      ],
+      '2026-10-11',
+      '2026-10-11',
+      new Map()
+    );
+    assert.equal(stats.uniqueLaunches, 3);
+    assert.equal(stats.uniqueGuests, 2);
+    assert.equal(stats.uniqueCandidates, 2);
+    assert.equal(stats.series[0].guest, 2);
+    assert.equal(stats.series[0].candidate, 2);
   });
 
   it('counts USAMPAC donate and ignores rows outside the range', () => {

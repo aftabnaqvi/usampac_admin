@@ -82,6 +82,8 @@ export function summarizeTelemetry(
   const cityClicks = new Map<string, Record<string, number>>();
   const listingCityDonate = new Map<string, number>();
   const uniqueLaunches = new Set<string>();
+  const uniqueGuests = new Set<string>();
+  const uniqueCandidates = new Set<string>();
   let donateTaps = 0;
 
   for (const day of days) {
@@ -101,7 +103,13 @@ export function summarizeTelemetry(
       uniqueLaunches.add(row.install_id);
       uniqueByDay.get(day)?.add(row.install_id);
       const audience = row.audience === 'candidate' ? 'candidate' : 'guest';
-      (audience === 'candidate' ? candidateByDay : guestByDay).get(day)?.add(row.install_id);
+      if (audience === 'candidate') {
+        uniqueCandidates.add(row.install_id);
+        candidateByDay.get(day)?.add(row.install_id);
+      } else {
+        uniqueGuests.add(row.install_id);
+        guestByDay.get(day)?.add(row.install_id);
+      }
     }
 
     const city = cityLabel(row.city, row.region);
@@ -176,6 +184,8 @@ export function summarizeTelemetry(
 
   return {
     uniqueLaunches: uniqueLaunches.size,
+    uniqueGuests: uniqueGuests.size,
+    uniqueCandidates: uniqueCandidates.size,
     donateTaps,
     topCity,
     series,
