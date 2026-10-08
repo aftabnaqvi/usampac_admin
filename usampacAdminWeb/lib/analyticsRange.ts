@@ -18,6 +18,11 @@ export function addDaysYmd(ymd: string, days: number): string {
   return `${utc.getUTCFullYear()}-${mm}-${dd}`;
 }
 
+function ymdUtc(ymd: string): number {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
 function tzOffsetMs(instant: Date): number {
   const dtf = new Intl.DateTimeFormat('en-US', {
     timeZone: TZ,
@@ -53,8 +58,8 @@ export function eachYmd(from: string, to: string): string[] {
   let cur = from;
   while (cur <= to) {
     days.push(cur);
+    if (days.length >= MAX_RANGE_DAYS) break;
     cur = addDaysYmd(cur, 1);
-    if (days.length > MAX_RANGE_DAYS + 1) break;
   }
   return days;
 }
@@ -83,9 +88,11 @@ export function parseAnalyticsRange(searchParams?: {
     to = ymd(searchParams?.to) ?? today;
   }
 
-  if (to > today) to = today;
   if (from > to) [from, to] = [to, from];
-  if (eachYmd(from, to).length > MAX_RANGE_DAYS) {
+  if (to > today) to = today;
+  if (from > to) from = to;
+  const span = Math.floor((ymdUtc(to) - ymdUtc(from)) / 86400000) + 1;
+  if (span > MAX_RANGE_DAYS) {
     from = addDaysYmd(to, -(MAX_RANGE_DAYS - 1));
   }
   return { from, to };

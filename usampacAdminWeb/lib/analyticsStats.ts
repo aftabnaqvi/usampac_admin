@@ -1,4 +1,4 @@
-import { eachYmd, occurredPacificYmd } from '@/lib/analyticsRange';
+import { eachYmd, occurredPacificYmd } from './analyticsRange';
 
 export type TelemetryRow = {
   occurred_at: string;
