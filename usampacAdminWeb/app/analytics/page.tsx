@@ -1,6 +1,6 @@
 import AdminHeader from '@/app/components/AdminHeader';
 import { getServerUser } from '@/lib/supabaseServer';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { supabaseAdminApi } from '@/lib/supabaseAdmin';
 import { isAdminUser } from '@/lib/appUsers';
 import { redirectToLogin } from '@/lib/loginRedirect';
 import {
@@ -25,12 +25,12 @@ async function requireAdmin() {
 }
 
 async function fetchEvents(fromIso: string, toIso: string): Promise<{ rows: TelemetryRow[]; error: string | null }> {
-  const admin = supabaseAdmin();
+  const api = supabaseAdminApi();
   const pageSize = 1000;
   const rows: TelemetryRow[] = [];
   let from = 0;
   while (from < 20000) {
-    const { data, error } = await admin
+    const { data, error } = await api
       .from('app_telemetry')
       .select('occurred_at,event_name,screen,install_id,audience,city,region,link_kind,target_kind,target_id')
       .gte('occurred_at', fromIso)
@@ -49,8 +49,7 @@ async function fetchEvents(fromIso: string, toIso: string): Promise<{ rows: Tele
 async function listingNames(): Promise<Map<string, string>> {
   const names = new Map<string, string>();
   try {
-    const admin = supabaseAdmin();
-    const api: any = (admin as any).schema ? (admin as any).schema('api') : admin;
+    const api = supabaseAdminApi();
     const [{ data: candidates }, { data: elected }] = await Promise.all([
       api.from('candidate_profiles_admin').select('user_id,display_name').limit(5000),
       api.from('active_elected_public').select('id,candidate_name').limit(5000)

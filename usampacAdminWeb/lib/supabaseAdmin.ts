@@ -12,6 +12,12 @@ export function supabaseAdmin() {
   }
 
   return createClient(url, serviceKey, {
-    auth: { persistSession: false }
+    auth: { persistSession: false },
+    db: { schema: 'api' }
   });
+}
+
+export function supabaseAdminApi() {
+  const admin = supabaseAdmin();
+  return typeof (admin as any).schema === 'function' ? (admin as any).schema('api') : admin;
 }
