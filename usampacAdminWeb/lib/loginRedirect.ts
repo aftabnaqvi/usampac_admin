@@ -10,7 +10,8 @@ const ALLOWED_PREFIXES = [
   '/admins',
   '/polls',
   '/quiz',
-  '/notifications'
+  '/notifications',
+  '/analytics'
 ];
 
 export function safeNextPath(next: string | null | undefined): string {

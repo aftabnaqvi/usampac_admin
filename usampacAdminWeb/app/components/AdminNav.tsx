@@ -19,7 +19,8 @@ const GROUPS = [
     links: [
       { href: '/polls', label: 'Polls' },
       { href: '/quiz', label: 'Quiz' },
-      { href: '/notifications', label: 'Notifications' }
+      { href: '/notifications', label: 'Notifications' },
+      { href: '/analytics', label: 'Analytics' }
     ]
   },
   {

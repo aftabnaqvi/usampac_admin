@@ -78,6 +78,8 @@ export const config = {
     '/quiz',
     '/quiz/:path*',
     '/notifications',
-    '/notifications/:path*'
+    '/notifications/:path*',
+    '/analytics',
+    '/analytics/:path*'
   ]
 };

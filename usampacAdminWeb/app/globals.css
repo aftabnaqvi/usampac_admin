@@ -552,7 +552,135 @@ a.btnPrimary:hover {
   color: var(--navy);
 }
 
+.analyticsRange label {
+  min-width: 140px;
+}
+
+.analyticsRange a.btnFit {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.analyticsRange a.btnFit:hover {
+  text-decoration: none;
+  background: var(--panel);
+}
+
+.analyticsKpis .kpi {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 4px 0;
+}
+
+.analyticsKpis .kpiText {
+  font-size: 22px;
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.chartCard {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.chartCard figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+
+.chartLegend {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 12px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.swatch.navy { background: var(--navy); }
+.swatch.red { background: var(--red); }
+
+.chartAxis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chartTick {
+  font-size: 10px;
+  fill: var(--muted);
+}
+
+.hbar {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.hbar li {
+  display: grid;
+  grid-template-columns: 120px 1fr 40px;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.hbarLabel {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hbarTrack {
+  height: 10px;
+  background: var(--panel);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.hbarFill {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+}
+
+.hbarValue {
+  text-align: right;
+  color: var(--muted);
+}
+
 @media (max-width: 960px) {
+  .chartGrid {
+    grid-template-columns: 1fr;
+  }
+
   .headerInner {
     align-items: center;
   }
