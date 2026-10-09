@@ -1,30 +1,19 @@
 import { revalidatePath } from 'next/cache';
-import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
-import { isAdminUser } from '@/lib/appUsers';
-import { redirectToLogin } from '@/lib/loginRedirect';
+import { requireAdmin } from '@/lib/requireAdmin';
 
 type AppConfigRow = {
   key: string;
   value: string | null;
 };
 
-async function requireAdmin() {
-  const { supabase, user } = await getServerUser();
-  if (!user) redirectToLogin('/manage/election-range');
-
-  try {
-    const dbPublic: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const ok = await isAdminUser(dbPublic, user.id);
-    if (!ok) redirectToLogin('/manage/election-range');
-  } catch {
-    // rely on RLS if this check fails
-  }
+async function requireElectionRangeAdmin() {
+  const { supabase } = await requireAdmin('/manage/election-range');
   return supabase;
 }
 
 async function getElectionRange(): Promise<string> {
-  const supabase = await requireAdmin();
+  const supabase = await requireElectionRangeAdmin();
   const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
   const { data, error } = await db.from('app_config').select('key,value').eq('key', 'election_range').limit(1);
   if (error) {
@@ -37,7 +26,7 @@ async function getElectionRange(): Promise<string> {
 
 async function saveElectionRange(formData: FormData) {
   'use server';
-  const supabase = await requireAdmin();
+  const supabase = await requireElectionRangeAdmin();
   const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
   const value = (formData.get('election_range') as string | null)?.trim() ?? '';
   if (!value) return;

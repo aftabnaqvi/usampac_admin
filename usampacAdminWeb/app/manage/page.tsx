@@ -1,7 +1,5 @@
-import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
-import { isAdminUser } from '@/lib/appUsers';
-import { redirectToLogin } from '@/lib/loginRedirect';
+import { requireAdmin } from '@/lib/requireAdmin';
 import { deleteCandidate, deleteElected, restoreCandidate, restoreElected } from './actions';
 import ConfirmButton from './ConfirmButton';
 import ListSearch from '@/app/components/ListSearch';
@@ -11,16 +9,8 @@ export default async function ManagePage({
 }: {
   searchParams?: { success?: string; error?: string; q?: string };
 }) {
-  const { supabase, user } = await getServerUser();
+  const { supabase, user } = await requireAdmin('/manage');
   const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-  if (!user) {
-    redirectToLogin('/manage');
-  }
-  try {
-    const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const ok = await isAdminUser(pub, user.id);
-    if (!ok) redirectToLogin('/manage');
-  } catch {}
 
   const query = (searchParams?.q ?? '').trim();
   const searchPattern = query ? `%${query.replace(/%/g, '\\%').replace(/_/g, '\\_')}%` : null;

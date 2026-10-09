@@ -1,11 +1,11 @@
 'use server';
 
-import { supabaseServer } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { requireAdminAction } from '@/lib/requireAdmin';
 
 export async function promoteCandidateToElected(userId: string, notes?: string) {
-  const supabase = supabaseServer();
+  const { supabase } = await requireAdminAction();
   const client: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const { error } = await client.rpc('promote_candidate_to_elected', {

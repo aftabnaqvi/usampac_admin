@@ -1,11 +1,11 @@
 'use server';
 
-import { supabaseServer } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { requireAdminAction } from '@/lib/requireAdmin';
 
 export async function deleteCandidate(userId: string) {
-  const supabase = supabaseServer();
+  const { supabase } = await requireAdminAction();
   const client: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const { error } = await client.rpc('admin_soft_delete_candidate', { p_user_id: userId });
@@ -23,7 +23,7 @@ export async function deleteCandidate(userId: string) {
 }
 
 export async function deleteElected(userId: string) {
-  const supabase = supabaseServer();
+  const { supabase } = await requireAdminAction();
   const client: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const { error } = await client.rpc('admin_soft_delete_elected', { p_user_id: userId });
@@ -39,7 +39,7 @@ export async function deleteElected(userId: string) {
 }
 
 export async function restoreCandidate(userId: string) {
-  const supabase = supabaseServer();
+  const { supabase } = await requireAdminAction();
   const client: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const { error } = await client.rpc('admin_restore_candidate', { p_user_id: userId });
@@ -57,7 +57,7 @@ export async function restoreCandidate(userId: string) {
 }
 
 export async function restoreElected(userId: string) {
-  const supabase = supabaseServer();
+  const { supabase } = await requireAdminAction();
   const client: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const { error } = await client.rpc('admin_restore_elected', { p_user_id: userId });

@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation';
 import AdminHeader from '@/app/components/AdminHeader';
-import { getServerUser } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { isAdminUser, listAdmins } from '@/lib/appUsers';
-import { redirectToLogin } from '@/lib/loginRedirect';
+import { listAdmins } from '@/lib/appUsers';
+import { requireAdmin } from '@/lib/requireAdmin';
 import { addAdminByEmail, removeAdminById } from './actions';
 import AddAdminForm from './AddAdminForm';
 import RemoveAdminButton from './RemoveAdminButton';
@@ -14,18 +13,7 @@ export default async function AdminsPage({
   searchParams?: { success?: string; error?: string };
 }) {
   try {
-    const { supabase, user } = await getServerUser();
-    if (!user) {
-      redirectToLogin('/admins');
-    }
-    try {
-      const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-      const ok = await isAdminUser(pub, user.id);
-      if (!ok) redirectToLogin('/admins');
-    } catch (e: any) {
-      if (String(e?.digest ?? '').startsWith('NEXT_REDIRECT') || String(e?.digest ?? '').startsWith('NEXT_NOT_FOUND')) throw e;
-    }
-
+    await requireAdmin('/admins');
     const admin = supabaseAdmin();
     const db = (admin as any).schema ? (admin as any).schema('api') : admin;
     const { data: adminRows, error, idColumn } = await listAdmins(db);

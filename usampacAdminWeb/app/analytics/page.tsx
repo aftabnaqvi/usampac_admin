@@ -1,8 +1,6 @@
 import AdminHeader from '@/app/components/AdminHeader';
-import { getServerUser } from '@/lib/supabaseServer';
 import { supabaseAdminApi } from '@/lib/supabaseAdmin';
-import { isAdminUser } from '@/lib/appUsers';
-import { redirectToLogin } from '@/lib/loginRedirect';
+import { requireAdmin } from '@/lib/requireAdmin';
 import {
   parseAnalyticsRange,
   pacificDayStartIso,
@@ -11,18 +9,6 @@ import {
 } from '@/lib/analyticsRange';
 import { summarizeTelemetry, type TelemetryRow } from '@/lib/analyticsStats';
 import { BarChart, LineChart, StackedLaunchChart } from './Charts';
-
-async function requireAdmin() {
-  const { supabase, user } = await getServerUser();
-  if (!user) redirectToLogin('/analytics');
-  try {
-    const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const ok = await isAdminUser(apiClient, user.id);
-    if (!ok) redirectToLogin('/analytics');
-  } catch (e: any) {
-    if (String(e?.digest ?? '').startsWith('NEXT_REDIRECT')) throw e;
-  }
-}
 
 async function fetchEvents(fromIso: string, toIso: string): Promise<{ rows: TelemetryRow[]; error: string | null }> {
   const api = supabaseAdminApi();
@@ -71,7 +57,7 @@ export default async function AnalyticsPage({
 }: {
   searchParams?: { from?: string; to?: string; preset?: string };
 }) {
-  await requireAdmin();
+  await requireAdmin('/analytics');
   const { from, to } = parseAnalyticsRange(searchParams);
   const fromIso = pacificDayStartIso(from);
   const toExclusiveIso = pacificDayStartIso(addDaysYmd(to, 1));

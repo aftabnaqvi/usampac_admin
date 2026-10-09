@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { upsertAdmin, removeAdmin } from '@/lib/appUsers';
 import { sendAdminInviteEmail } from '@/lib/emailAdmin';
+import { requireAdminAction } from '@/lib/requireAdmin';
 
 export type AddAdminResult =
   | { ok: true; emailSent: boolean; invitedBySupabase: boolean }
@@ -35,6 +36,7 @@ export async function addAdminByEmail(emailRaw: string, inviteIfMissing: boolean
   }
 
   try {
+    await requireAdminAction();
     const admin = supabaseAdmin();
     const adminAppUrl = getAdminAppUrl();
     const redirectTo = `${adminAppUrl}/auth-complete`;
@@ -89,6 +91,7 @@ export async function removeAdminById(userIdRaw: string): Promise<RemoveAdminRes
   }
 
   try {
+    await requireAdminAction();
     const admin = supabaseAdmin();
     const db = (admin as any).schema ? (admin as any).schema('api') : admin;
     const { error } = await removeAdmin(db, userId);

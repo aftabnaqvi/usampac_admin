@@ -1,7 +1,5 @@
-import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
-import { isAdminUser } from '@/lib/appUsers';
-import { redirectToLogin } from '@/lib/loginRedirect';
+import { requireAdmin } from '@/lib/requireAdmin';
 import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
 import ListSearch from '@/app/components/ListSearch';
 
@@ -44,19 +42,7 @@ export default async function ElectedOfficialsPage({
     return '—';
   };
 
-  const { supabase, user } = await getServerUser();
-
-  if (!user) {
-    redirectToLogin('/elected');
-  }
-
-  try {
-    const dbPublic: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const ok = await isAdminUser(dbPublic, user.id);
-    if (!ok) redirectToLogin('/elected');
-  } catch {
-    // rely on RLS if this check fails
-  }
+  const { supabase, user } = await requireAdmin('/elected');
 
   const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 

@@ -1,8 +1,6 @@
 import { revalidatePath } from 'next/cache';
-import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
-import { isAdminUser } from '@/lib/appUsers';
-import { redirectToLogin } from '@/lib/loginRedirect';
+import { requireAdmin } from '@/lib/requireAdmin';
 import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
 import ListSearch from '@/app/components/ListSearch';
 
@@ -15,22 +13,13 @@ type NotificationRow = {
   is_active: boolean;
 };
 
-async function requireAdmin() {
-  const { supabase, user } = await getServerUser();
-  if (!user) redirectToLogin('/notifications');
-
-  try {
-    const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const ok = await isAdminUser(apiClient, user.id);
-    if (!ok) redirectToLogin('/notifications');
-  } catch {
-    // rely on RLS if this check fails
-  }
+async function requireNotificationsAdmin() {
+  const { supabase } = await requireAdmin('/notifications');
   return supabase;
 }
 
 async function getData() {
-  const supabase = await requireAdmin();
+  const supabase = await requireNotificationsAdmin();
   const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
   const { data, error } = await apiClient
     .from('notifications')
@@ -55,7 +44,7 @@ async function upsertNotification(formData: FormData) {
 
   if (!title || title.trim() === '') return;
 
-  const supabase = await requireAdmin();
+  const supabase = await requireNotificationsAdmin();
   const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const payload: Partial<NotificationRow> = {
@@ -89,7 +78,7 @@ async function deleteNotification(formData: FormData) {
   const id = (formData.get('id') as string | null) ?? null;
   if (!id) return;
 
-  const supabase = await requireAdmin();
+  const supabase = await requireNotificationsAdmin();
   const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
   await apiClient.from('notifications').delete().eq('id', id);
   revalidatePath('/notifications');

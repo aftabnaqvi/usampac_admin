@@ -1,8 +1,6 @@
-import { getServerUser } from '@/lib/supabaseServer';
 import Link from 'next/link';
 import AdminHeader from '@/app/components/AdminHeader';
-import { isAdminUser } from '@/lib/appUsers';
-import { redirectToLogin } from '@/lib/loginRedirect';
+import { requireAdmin } from '@/lib/requireAdmin';
 import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
 import ListSearch from '@/app/components/ListSearch';
 
@@ -16,16 +14,8 @@ export default async function Rejected({
 }: {
   searchParams?: { q?: string };
 }) {
-  const { supabase, user } = await getServerUser();
+  const { supabase, user } = await requireAdmin('/rejected');
   const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-  if (!user) {
-    redirectToLogin('/rejected');
-  }
-  try {
-    const pub: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const ok = await isAdminUser(pub, user.id);
-    if (!ok) redirectToLogin('/rejected');
-  } catch {}
   const { data, error } = await (db as any)
     .from('candidate_profiles_admin')
     .select('*')

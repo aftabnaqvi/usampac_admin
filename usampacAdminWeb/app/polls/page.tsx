@@ -1,8 +1,6 @@
 import { revalidatePath } from 'next/cache';
-import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
-import { isAdminUser } from '@/lib/appUsers';
-import { redirectToLogin } from '@/lib/loginRedirect';
+import { requireAdmin } from '@/lib/requireAdmin';
 import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
 import ListSearch from '@/app/components/ListSearch';
 
@@ -41,22 +39,13 @@ type PollOptionResult = {
   total_votes: number | null;
 };
 
-async function requireAdmin() {
-  const { supabase, user } = await getServerUser();
-  if (!user) redirectToLogin('/polls');
-
-  try {
-    const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const ok = await isAdminUser(apiClient, user.id);
-    if (!ok) redirectToLogin('/polls');
-  } catch {
-    // fall back to RLS
-  }
+async function requirePollsAdmin() {
+  const { supabase } = await requireAdmin('/polls');
   return supabase;
 }
 
 async function getData() {
-  const supabase = await requireAdmin();
+  const supabase = await requirePollsAdmin();
   const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const [
@@ -105,7 +94,7 @@ async function upsertPoll(formData: FormData) {
   const effectiveSlug =
     slugRaw && slugRaw.trim() !== '' ? slugRaw.trim() : slugify(normalizedTitle);
 
-  const supabase = await requireAdmin();
+  const supabase = await requirePollsAdmin();
   const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const payload: Partial<Poll> = {
@@ -135,7 +124,7 @@ async function deletePoll(formData: FormData) {
   const id = (formData.get('id') as string | null) ?? null;
   if (!id) return;
 
-  const supabase = await requireAdmin();
+  const supabase = await requirePollsAdmin();
   const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
   const { error } = await apiClient.from('polls').delete().eq('id', id);
   if (error) {
@@ -156,7 +145,7 @@ async function upsertOption(formData: FormData) {
 
   const position = positionRaw ? parseInt(positionRaw, 10) || 0 : 0;
 
-  const supabase = await requireAdmin();
+  const supabase = await requirePollsAdmin();
   const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
   const payload: Partial<PollOption> = {
@@ -185,7 +174,7 @@ async function deleteOption(formData: FormData) {
   const id = (formData.get('id') as string | null) ?? null;
   if (!id) return;
 
-  const supabase = await requireAdmin();
+  const supabase = await requirePollsAdmin();
   const apiClient: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
   const { error } = await apiClient.from('poll_options').delete().eq('id', id);
   if (error) {

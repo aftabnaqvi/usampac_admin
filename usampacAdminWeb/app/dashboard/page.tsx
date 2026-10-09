@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { getServerUser } from '@/lib/supabaseServer';
 import AdminHeader from '@/app/components/AdminHeader';
-import { isAdminUser } from '@/lib/appUsers';
-import { redirectToLogin } from '@/lib/loginRedirect';
+import { requireAdmin } from '@/lib/requireAdmin';
 import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
 import ListSearch from '@/app/components/ListSearch';
 
@@ -77,18 +75,7 @@ export default async function Dashboard({
   searchParams?: { q?: string };
 }) {
   try {
-    const { supabase, user } = await getServerUser();
-
-    if (!user) {
-      redirectToLogin('/dashboard');
-    }
-    try {
-      const dbPublic: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-      const ok = await isAdminUser(dbPublic, user.id);
-      if (!ok) redirectToLogin('/dashboard');
-    } catch {
-      // rely on RLS if this check fails
-    }
+    const { supabase, user } = await requireAdmin('/dashboard');
 
     const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
