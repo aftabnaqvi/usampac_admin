@@ -1,9 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  adminAppUrl,
+  isCronAuthorized,
   isPendingApprovalStatus,
+  isWebhookAuthorized,
   pendingCandidateFromRow,
-  shouldNotifyPendingRow
+  shouldNotifyPendingRow,
+  shouldNotifyWebhookBody
 } from './pendingNotify';
 
 describe('pendingNotify', () => {
@@ -44,5 +48,33 @@ describe('pendingNotify', () => {
     assert.equal(shouldNotifyPendingRow({ last_user_edit_at: null }, now), true);
     assert.equal(shouldNotifyPendingRow({ last_user_edit_at: '2026-10-10T10:00:00.000Z' }, now), true);
     assert.equal(shouldNotifyPendingRow({ last_user_edit_at: '2026-10-09T08:00:00.000Z' }, now), false);
+  });
+
+  it('authorizes webhook and cron without treating a candidate JWT as a secret', () => {
+    const headers = (values: Record<string, string>) => ({
+      get(name: string) {
+        return values[name.toLowerCase()] ?? null;
+      }
+    });
+    assert.equal(isWebhookAuthorized(headers({ authorization: 'Bearer hook' }), 'hook'), true);
+    assert.equal(isWebhookAuthorized(headers({ 'x-webhook-secret': 'hook' }), 'hook'), true);
+    assert.equal(isWebhookAuthorized(headers({ authorization: 'Bearer user-jwt' }), 'hook'), false);
+    assert.equal(isWebhookAuthorized(headers({}), ''), false);
+    assert.equal(isCronAuthorized(headers({ 'x-vercel-cron': '1' })), true);
+    assert.equal(isCronAuthorized(headers({ authorization: 'Bearer cron' }), 'cron'), true);
+    assert.equal(isCronAuthorized(headers({ authorization: 'Bearer nope' }), 'cron'), false);
+  });
+
+  it('notifies only the first time a row becomes pending', () => {
+    assert.equal(shouldNotifyWebhookBody({ record: { approval_status: 'pending' } }), true);
+    assert.equal(
+      shouldNotifyWebhookBody({
+        record: { approval_status: 'pending' },
+        old_record: { approval_status: 'pending' }
+      }),
+      false
+    );
+    assert.equal(shouldNotifyWebhookBody({ record: { approval_status: 'approved' } }), false);
+    assert.equal(adminAppUrl().startsWith('https://'), true);
   });
 });

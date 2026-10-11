@@ -21,6 +21,9 @@ describe('safeNextPath', () => {
     assert.equal(safeNextPath('/pending'), '/pending');
     assert.equal(safeNextPath('/approved'), '/approved');
     assert.equal(safeNextPath('/rejected'), '/rejected');
+    assert.equal(safeNextPath('/elected'), '/elected');
+    assert.equal(safeNextPath('/admins'), '/admins');
+    assert.equal(safeNextPath('/manage/election-range'), '/manage/election-range');
   });
 
   it('rejects unknown in-app paths', () => {

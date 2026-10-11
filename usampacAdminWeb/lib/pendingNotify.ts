@@ -1,6 +1,35 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { listAdmins } from '@/lib/appUsers';
 
+export function isWebhookAuthorized(
+  headers: { get(name: string): string | null },
+  secret = process.env.PENDING_NOTIFY_SECRET
+): boolean {
+  if (!secret) return false;
+  const auth = headers.get('authorization') ?? '';
+  const headerSecret = headers.get('x-webhook-secret') ?? '';
+  return auth === `Bearer ${secret}` || headerSecret === secret;
+}
+
+export function isCronAuthorized(
+  headers: { get(name: string): string | null },
+  cronSecret = process.env.CRON_SECRET
+): boolean {
+  if (headers.get('x-vercel-cron') === '1') return true;
+  const auth = headers.get('authorization') ?? '';
+  return Boolean(cronSecret) && auth === `Bearer ${cronSecret}`;
+}
+
+export function shouldNotifyWebhookBody(body: any): boolean {
+  const record = (body?.record ?? body?.candidate ?? body) as PendingCandidatePayload & {
+    approval_status?: string | null;
+  };
+  const oldRecord = body?.old_record as { approval_status?: string | null } | undefined;
+  if (!isPendingApprovalStatus(record?.approval_status)) return false;
+  if (oldRecord && isPendingApprovalStatus(oldRecord.approval_status)) return false;
+  return true;
+}
+
 export type PendingCandidatePayload = {
   display_name?: string | null;
   email?: string | null;

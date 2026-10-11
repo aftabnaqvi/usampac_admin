@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import {
+  isCronAuthorized,
+  isWebhookAuthorized,
   loadPendingCandidate,
   notifyAdminsOfPendingCandidate,
   notifyUnnotifiedPendingCandidates,
+  shouldNotifyWebhookBody,
   type PendingCandidatePayload
 } from '@/lib/pendingNotify';
 
@@ -11,16 +14,8 @@ type Auth =
   | { kind: 'webhook' }
   | { kind: 'user'; userId: string };
 
-function webhookAuthorized(request: Request) {
-  const secret = process.env.PENDING_NOTIFY_SECRET;
-  if (!secret) return false;
-  const auth = request.headers.get('authorization') ?? '';
-  const headerSecret = request.headers.get('x-webhook-secret') ?? '';
-  return auth === `Bearer ${secret}` || headerSecret === secret;
-}
-
 async function authorize(request: Request): Promise<Auth | null> {
-  if (webhookAuthorized(request)) return { kind: 'webhook' };
+  if (isWebhookAuthorized(request.headers)) return { kind: 'webhook' };
 
   const auth = request.headers.get('authorization') ?? '';
   if (!auth.startsWith('Bearer ')) return null;
@@ -37,27 +32,8 @@ async function authorize(request: Request): Promise<Auth | null> {
   }
 }
 
-function shouldNotify(body: any) {
-  const record = (body?.record ?? body?.candidate ?? body) as PendingCandidatePayload & {
-    approval_status?: string | null;
-  };
-  const oldRecord = body?.old_record as { approval_status?: string | null } | undefined;
-  if (String(record?.approval_status ?? '').toLowerCase() !== 'pending') return false;
-  if (oldRecord && String(oldRecord.approval_status ?? '').toLowerCase() === 'pending') {
-    return false;
-  }
-  return true;
-}
-
-function cronAuthorized(request: Request) {
-  if (request.headers.get('x-vercel-cron') === '1') return true;
-  const cronSecret = process.env.CRON_SECRET;
-  const auth = request.headers.get('authorization') ?? '';
-  return Boolean(cronSecret) && auth === `Bearer ${cronSecret}`;
-}
-
 export async function GET(request: Request) {
-  if (!cronAuthorized(request) && !webhookAuthorized(request)) {
+  if (!isCronAuthorized(request.headers) && !isWebhookAuthorized(request.headers)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
@@ -89,7 +65,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, skipped: true, reason: 'not_pending' });
     }
   } else {
-    if (!shouldNotify(body)) {
+    if (!shouldNotifyWebhookBody(body)) {
       return NextResponse.json({ ok: true, skipped: true });
     }
     record = (body.record ?? body.candidate ?? body) as PendingCandidatePayload;

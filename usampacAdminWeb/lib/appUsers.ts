@@ -2,8 +2,9 @@ import { adminAccessFromRow } from '@/lib/adminAccess';
 
 type DbClient = any;
 
-const APP_USERS_VIEW = 'app_users_admin';
-const APP_USERS_ID_COLUMNS = ['auth_sub', 'user_id', 'id'] as const;
+export const APP_USERS_VIEW = 'app_users_admin';
+export const APP_USERS_ID_COLUMNS = ['auth_sub', 'user_id', 'id'] as const;
+export const SET_USER_ROLE_RPC = 'admin_set_user_role';
 
 export function apiSchema(db: DbClient): DbClient {
   return typeof db?.schema === 'function' ? db.schema('api') : db;
@@ -47,9 +48,9 @@ export async function listAdmins(db: DbClient) {
 }
 
 export async function upsertAdmin(db: DbClient, userId: string) {
-  return db.rpc('admin_set_user_role', { p_user_id: userId, p_role: 'ADMIN' });
+  return db.rpc(SET_USER_ROLE_RPC, { p_user_id: userId, p_role: 'ADMIN' });
 }
 
 export async function removeAdmin(db: DbClient, userId: string) {
-  return db.rpc('admin_set_user_role', { p_user_id: userId, p_role: 'USER' });
+  return db.rpc(SET_USER_ROLE_RPC, { p_user_id: userId, p_role: 'USER' });
 }

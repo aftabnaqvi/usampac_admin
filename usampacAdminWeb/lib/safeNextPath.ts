@@ -1,4 +1,4 @@
-const ALLOWED_PREFIXES = [
+export const ALLOWED_PREFIXES = [
   '/dashboard',
   '/pending',
   '/approved',

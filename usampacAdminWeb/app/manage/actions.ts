@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { electedRpcArgs, RESTORE_ELECTED_RPC, SOFT_DELETE_ELECTED_RPC } from '@/lib/adminReview';
 import { requireAdminAction } from '@/lib/requireAdmin';
 import { setCandidateDeletedAt } from '@/lib/candidateSoftDelete';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
@@ -34,7 +35,7 @@ export async function deleteElected(userId: string) {
   const { supabase } = await requireAdminAction();
   const client: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
-  const { error } = await client.rpc('admin_soft_delete_elected', { p_user_id: userId });
+  const { error } = await client.rpc(SOFT_DELETE_ELECTED_RPC, electedRpcArgs(userId));
 
   if (error) {
     redirect(`/manage?error=${encodeURIComponent(error.message)}`);
@@ -62,7 +63,7 @@ export async function restoreElected(userId: string) {
   const { supabase } = await requireAdminAction();
   const client: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
-  const { error } = await client.rpc('admin_restore_elected', { p_user_id: userId });
+  const { error } = await client.rpc(RESTORE_ELECTED_RPC, electedRpcArgs(userId));
 
   if (error) {
     redirect(`/manage?error=${encodeURIComponent(error.message)}`);

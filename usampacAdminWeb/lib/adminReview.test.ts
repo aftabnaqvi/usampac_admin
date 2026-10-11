@@ -2,9 +2,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   APPROVE_CANDIDATE_RPC,
+  electedRpcArgs,
   PROMOTE_CANDIDATE_RPC,
   REJECT_CANDIDATE_RPC,
-  reviewRpcArgs
+  RESTORE_ELECTED_RPC,
+  reviewRpcArgs,
+  SOFT_DELETE_ELECTED_RPC
 } from './adminReview';
 
 describe('adminReview', () => {
@@ -20,5 +23,8 @@ describe('adminReview', () => {
     });
     assert.deepEqual(reviewRpcArgs(userId, ''), { p_user_id: userId, p_notes: null });
     assert.equal(Object.prototype.hasOwnProperty.call(reviewRpcArgs(userId), 'user_id'), false);
+    assert.equal(SOFT_DELETE_ELECTED_RPC, 'admin_soft_delete_elected');
+    assert.equal(RESTORE_ELECTED_RPC, 'admin_restore_elected');
+    assert.deepEqual(electedRpcArgs(userId), { p_user_id: userId });
   });
 });
