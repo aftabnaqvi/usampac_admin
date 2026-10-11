@@ -701,3 +701,20 @@ a.btnPrimary:hover {
     gap: 10px 16px;
   }
 }
+
+.flyerPreview {
+  display: block;
+  max-width: 220px;
+  max-height: 280px;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin: 6px 0 10px;
+  background: var(--panel);
+}
+
+input[type="file"] {
+  padding: 8px;
+  background: var(--panel);
+}
