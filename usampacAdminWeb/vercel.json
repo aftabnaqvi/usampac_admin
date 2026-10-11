@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/pending-notify",
+      "schedule": "0 16 * * *"
+    }
+  ]
+}

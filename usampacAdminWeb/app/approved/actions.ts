@@ -2,16 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { PROMOTE_CANDIDATE_RPC, reviewRpcArgs } from '@/lib/adminReview';
 import { requireAdminAction } from '@/lib/requireAdmin';
 
 export async function promoteCandidateToElected(userId: string, notes?: string) {
   const { supabase } = await requireAdminAction();
   const client: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
-  const { error } = await client.rpc('promote_candidate_to_elected', {
-    p_user_id: userId,
-    p_notes: notes ?? null
-  });
+  const { error } = await client.rpc(PROMOTE_CANDIDATE_RPC, reviewRpcArgs(userId, notes));
 
   if (error) {
     redirect(`/approved?error=${encodeURIComponent(error.message)}`);

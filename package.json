@@ -1,0 +1,11 @@
+{
+  "name": "usampac-admin",
+  "private": true,
+  "description": "USAMPAC admin (web + SQL scripts)",
+  "scripts": {
+    "test": "node sql/test-sqls.mjs && npx --yes tsx --test usampacAdminWeb/lib/*.test.ts",
+    "test:sql": "node sql/test-sqls.mjs",
+    "test:web": "npx --yes tsx --test usampacAdminWeb/lib/*.test.ts"
+  },
+  "type": "module"
+}

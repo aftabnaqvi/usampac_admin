@@ -43,6 +43,72 @@ describe('candidateSoftDelete', () => {
     assert.deepEqual(result.data, [{ user_id: 'a' }]);
   });
 
+  it('does not treat the old app_users user_id error as a missing deleted_at column', async () => {
+    const result = await queryMaybeExcludingDeleted(async () => ({
+      data: null,
+      error: { message: 'column "user_id" does not exist' }
+    }));
+    assert.equal(result.error?.message, 'column "user_id" does not exist');
+  });
+
+  it('tells Manage to run SQL when deleted_at is missing', async () => {
+    const admin = {
+      from() {
+        return {
+          update() {
+            return {
+              eq() {
+                return {
+                  select() {
+                    return {
+                      maybeSingle: async () => ({
+                        data: null,
+                        error: { message: 'column "deleted_at" does not exist' }
+                      })
+                    };
+                  }
+                };
+              }
+            };
+          },
+          delete() {
+            throw new Error('hard delete is not allowed');
+          }
+        };
+      }
+    };
+    await assert.rejects(
+      () => setCandidateDeletedAt(admin, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', true),
+      (error: unknown) => error instanceof Error && error.message === SOFT_DELETE_SQL_HINT
+    );
+  });
+
+  it('refuses to hide a row that is not there', async () => {
+    const admin = {
+      from() {
+        return {
+          update() {
+            return {
+              eq() {
+                return {
+                  select() {
+                    return {
+                      maybeSingle: async () => ({ data: null, error: null })
+                    };
+                  }
+                };
+              }
+            };
+          }
+        };
+      }
+    };
+    await assert.rejects(
+      () => setCandidateDeletedAt(admin, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', true),
+      /Candidate not found/
+    );
+  });
+
   it('sets and clears deleted_at and never sends a delete', async () => {
     const calls: Array<{ table: string; payload: unknown; userId: string }> = [];
     const admin = {
@@ -76,7 +142,9 @@ describe('candidateSoftDelete', () => {
     await setCandidateDeletedAt(admin, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
     assert.equal(calls.length, 2);
     assert.equal(calls[0].table, 'candidate_profiles');
+    assert.equal(calls[0].table !== 'app_users', true);
     assert.equal(typeof (calls[0].payload as { deleted_at: string }).deleted_at, 'string');
     assert.equal((calls[1].payload as { deleted_at: string | null }).deleted_at, null);
+    assert.equal(Object.prototype.hasOwnProperty.call(calls[0].payload as object, 'user_id'), false);
   });
 });
