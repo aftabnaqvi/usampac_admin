@@ -23,6 +23,8 @@ describe('candidateSoftDelete', () => {
       ]).map((row) => row.user_id),
       ['a']
     );
+    assert.deepEqual(excludeSoftDeletedRows(null), []);
+    assert.deepEqual(excludeSoftDeletedRows(undefined), []);
   });
 
   it('detects a missing deleted_at column so Manage can show a SQL hint', () => {

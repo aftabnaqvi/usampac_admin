@@ -54,6 +54,88 @@ function candidateLabel(candidate: PendingCandidatePayload) {
   return { name, office, place, year };
 }
 
+/** Cron backup for a missed iOS/webhook call. Do not re-email the whole pending queue every day. */
+export const PENDING_NOTIFY_LOOKBACK_HOURS = 26;
+
+export function pendingCandidateFromRow(row: {
+  display_name?: string | null;
+  email?: string | null;
+  office_name?: string | null;
+  office_level?: string | null;
+  office_type?: string | null;
+  city_name?: string | null;
+  state_code?: string | null;
+  cycle?: string | number | null;
+}): PendingCandidatePayload {
+  return {
+    display_name: row.display_name ?? null,
+    email: row.email ?? null,
+    office_name: row.office_name ?? null,
+    office_level: row.office_level ?? null,
+    office_type: row.office_type ?? null,
+    city_name: row.city_name ?? null,
+    state_code: row.state_code ?? null,
+    cycle: row.cycle ?? null
+  };
+}
+
+export function isPendingApprovalStatus(status: string | null | undefined): boolean {
+  return String(status ?? '').trim().toLowerCase() === 'pending';
+}
+
+export function shouldNotifyPendingRow(
+  row: { last_user_edit_at?: string | null; deleted_at?: string | null },
+  now = new Date()
+): boolean {
+  if (row.deleted_at) return false;
+  const edited = row.last_user_edit_at?.trim();
+  if (!edited) return true;
+  const at = Date.parse(edited);
+  if (Number.isNaN(at)) return true;
+  return now.getTime() - at <= PENDING_NOTIFY_LOOKBACK_HOURS * 60 * 60 * 1000;
+}
+
+export async function loadPendingCandidate(userId: string): Promise<PendingCandidatePayload | null> {
+  const id = userId.trim();
+  if (!id) return null;
+
+  const admin = supabaseAdmin();
+  const db = (admin as any).schema ? (admin as any).schema('api') : admin;
+  const { data, error } = await db
+    .from('candidate_profiles')
+    .select('display_name,email,office_name,office_level,city_name,state_code,cycle,approval_status,deleted_at')
+    .eq('user_id', id)
+    .maybeSingle();
+
+  if (error || !data || data.deleted_at || !isPendingApprovalStatus(data.approval_status)) {
+    return null;
+  }
+  return pendingCandidateFromRow(data);
+}
+
+export async function notifyUnnotifiedPendingCandidates(): Promise<{
+  checked: number;
+  notified: number;
+}> {
+  const admin = supabaseAdmin();
+  const db = (admin as any).schema ? (admin as any).schema('api') : admin;
+  const { data, error } = await db
+    .from('candidate_profiles_pending')
+    .select('display_name,email,office_name,office_level,city_name,state_code,cycle,approval_status,deleted_at,last_user_edit_at');
+
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []).filter((row: { deleted_at?: string | null; last_user_edit_at?: string | null }) =>
+    shouldNotifyPendingRow(row)
+  );
+  let notified = 0;
+  for (const row of rows) {
+    await notifyAdminsOfPendingCandidate(pendingCandidateFromRow(row));
+    notified += 1;
+  }
+  return { checked: data?.length ?? 0, notified };
+}
+
 export async function notifyAdminsOfPendingCandidate(candidate: PendingCandidatePayload) {
   const { name, office, place, year } = candidateLabel(candidate);
   const pendingUrl = `${adminAppUrl()}/pending`;

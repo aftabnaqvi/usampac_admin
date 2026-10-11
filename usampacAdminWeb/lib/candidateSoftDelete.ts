@@ -15,8 +15,11 @@ export function isActiveCandidateRow(row: { deleted_at?: string | null } | null 
   return flag == null || flag === '';
 }
 
-export function excludeSoftDeletedRows<T extends { deleted_at?: string | null }>(rows: T[] | null | undefined): T[] {
-  return (rows ?? []).filter((row) => isActiveCandidateRow(row));
+export function excludeSoftDeletedRows<T extends { deleted_at?: string | null } = { deleted_at?: string | null }>(
+  rows: readonly T[] | null | undefined | unknown
+): T[] {
+  if (!Array.isArray(rows)) return [];
+  return (rows as T[]).filter((row) => isActiveCandidateRow(row));
 }
 
 export async function queryMaybeExcludingDeleted<T>(build: (excludeDeleted: boolean) => PromiseLike<{ data: T; error: { message: string } | null; count?: number | null }>): Promise<{
