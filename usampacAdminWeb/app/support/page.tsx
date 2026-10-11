@@ -21,8 +21,9 @@ export default function SupportPage() {
       </p>
       <p>
         <strong>I am a candidate and do not see my listing.</strong> Profiles appear after an
-        administrator approves them. Sign in, open Settings (gear), and check whether your
-        profile is pending, approved, or rejected.
+        administrator approves them. Sign in and open the Notifications tab — you will get a
+        notice there when your registration is complete. Settings (gear) also shows whether
+        your profile is pending, approved, or rejected.
       </p>
       <p>
         <strong>I need to change my public email or phone.</strong> Sign in, open your profile

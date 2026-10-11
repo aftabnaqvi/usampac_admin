@@ -3,22 +3,30 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdminAction } from '@/lib/requireAdmin';
+import { setCandidateDeletedAt } from '@/lib/candidateSoftDelete';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-export async function deleteCandidate(userId: string) {
-  const { supabase } = await requireAdminAction();
-  const client: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
+function fail(message: string): never {
+  redirect(`/manage?error=${encodeURIComponent(message)}`);
+}
 
-  const { error } = await client.rpc('admin_soft_delete_candidate', { p_user_id: userId });
-
-  if (error) {
-    redirect(`/manage?error=${encodeURIComponent(error.message)}`);
-  }
-
+function refreshCandidatePages() {
   revalidatePath('/manage');
   revalidatePath('/pending');
   revalidatePath('/approved');
   revalidatePath('/rejected');
   revalidatePath('/dashboard');
+}
+
+export async function deleteCandidate(userId: string) {
+  await requireAdminAction();
+  try {
+    await setCandidateDeletedAt(supabaseAdmin(), userId, true);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : 'Could not soft-delete candidate.');
+  }
+
+  refreshCandidatePages();
   redirect('/manage?success=candidate');
 }
 
@@ -39,20 +47,14 @@ export async function deleteElected(userId: string) {
 }
 
 export async function restoreCandidate(userId: string) {
-  const { supabase } = await requireAdminAction();
-  const client: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-
-  const { error } = await client.rpc('admin_restore_candidate', { p_user_id: userId });
-
-  if (error) {
-    redirect(`/manage?error=${encodeURIComponent(error.message)}`);
+  await requireAdminAction();
+  try {
+    await setCandidateDeletedAt(supabaseAdmin(), userId, false);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : 'Could not restore candidate.');
   }
 
-  revalidatePath('/manage');
-  revalidatePath('/pending');
-  revalidatePath('/approved');
-  revalidatePath('/rejected');
-  revalidatePath('/dashboard');
+  refreshCandidatePages();
   redirect('/manage?success=restore_candidate');
 }
 

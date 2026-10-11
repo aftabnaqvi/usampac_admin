@@ -4,6 +4,7 @@ import AdminHeader from '@/app/components/AdminHeader';
 import { requireAdmin } from '@/lib/requireAdmin';
 import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
 import ListSearch from '@/app/components/ListSearch';
+import { excludeSoftDeletedRows, queryMaybeExcludingDeleted } from '@/lib/candidateSoftDelete';
 
 function CandidatePhoto({ url, name }: { url?: string | null; name: string }) {
   if (url) {
@@ -80,16 +81,43 @@ export default async function Dashboard({
     const db: any = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
     const [{ count: pendingCount }, { count: approvedCount }, { count: rejectedCount }] = await Promise.all([
-      db.from('candidate_profiles_pending').select('*', { count: 'exact', head: true }),
-      db.from('candidate_profiles_admin').select('*', { count: 'exact', head: true }).eq('approval_status', 'approved'),
-      db.from('candidate_profiles_admin').select('*', { count: 'exact', head: true }).eq('approval_status', 'rejected')
+      queryMaybeExcludingDeleted(async (excludeDeleted) => {
+        let q = db.from('candidate_profiles_pending').select('*', { count: 'exact', head: true });
+        if (excludeDeleted) q = q.is('deleted_at', null);
+        return q;
+      }),
+      queryMaybeExcludingDeleted(async (excludeDeleted) => {
+        let q = db.from('candidate_profiles_admin').select('*', { count: 'exact', head: true }).eq('approval_status', 'approved');
+        if (excludeDeleted) q = q.is('deleted_at', null);
+        return q;
+      }),
+      queryMaybeExcludingDeleted(async (excludeDeleted) => {
+        let q = db.from('candidate_profiles_admin').select('*', { count: 'exact', head: true }).eq('approval_status', 'rejected');
+        if (excludeDeleted) q = q.is('deleted_at', null);
+        return q;
+      })
     ]);
 
     const [{ data: pending }, { data: approved }, { data: rejected }] = await Promise.all([
-      db.from('candidate_profiles_pending').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,photo_url').limit(10),
-      db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at,photo_url').eq('approval_status', 'approved').limit(10),
-      db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at,reviewer_notes,photo_url').eq('approval_status', 'rejected').limit(10)
+      queryMaybeExcludingDeleted(async (excludeDeleted) => {
+        let q = db.from('candidate_profiles_pending').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,photo_url,deleted_at').limit(10);
+        if (excludeDeleted) q = q.is('deleted_at', null);
+        return q;
+      }),
+      queryMaybeExcludingDeleted(async (excludeDeleted) => {
+        let q = db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at,photo_url,deleted_at').eq('approval_status', 'approved').limit(10);
+        if (excludeDeleted) q = q.is('deleted_at', null);
+        return q;
+      }),
+      queryMaybeExcludingDeleted(async (excludeDeleted) => {
+        let q = db.from('candidate_profiles_admin').select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approved_at,reviewer_notes,photo_url,deleted_at').eq('approval_status', 'rejected').limit(10);
+        if (excludeDeleted) q = q.is('deleted_at', null);
+        return q;
+      })
     ]);
+    const pendingActive = excludeSoftDeletedRows(pending);
+    const approvedActive = excludeSoftDeletedRows(approved);
+    const rejectedActive = excludeSoftDeletedRows(rejected);
 
     const electedSelect = 'id,candidate_name,office_name,level,term_start,term_end,photo_url';
     const electedPublic = await db
@@ -170,9 +198,9 @@ export default async function Dashboard({
     const candidateName = (r: any) => r.display_name ?? r.email ?? 'Candidate';
     const query = listSearchQuery(searchParams?.q);
     const qLink = (href: string) => (query ? `${href}?q=${encodeURIComponent(query)}` : href);
-    const pendingRows = (pending ?? []).filter((r: any) => matchesListQuery(r, query));
-    const approvedRows = (approved ?? []).filter((r: any) => matchesListQuery(r, query));
-    const rejectedRows = (rejected ?? []).filter((r: any) => matchesListQuery(r, query));
+    const pendingRows = pendingActive.filter((r: any) => matchesListQuery(r, query));
+    const approvedRows = approvedActive.filter((r: any) => matchesListQuery(r, query));
+    const rejectedRows = rejectedActive.filter((r: any) => matchesListQuery(r, query));
     const electedRows = (elected ?? []).filter((r: any) => matchesListQuery(r, query));
     const pollRows = (polls ?? []).filter((r: any) => matchesListQuery({ display_name: r.title }, query));
     const quizRows = (quizQuestions ?? []).filter((r: any) => matchesListQuery({ display_name: r.prompt }, query));

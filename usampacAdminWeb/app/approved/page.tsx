@@ -5,6 +5,8 @@ import { promoteCandidateToElected } from './actions';
 import { requireAdmin } from '@/lib/requireAdmin';
 import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
 import ListSearch from '@/app/components/ListSearch';
+import TestCandidateBadge from '@/app/components/TestCandidateBadge';
+import { excludeSoftDeletedRows, queryMaybeExcludingDeleted } from '@/lib/candidateSoftDelete';
 
 export default async function Approved({
   searchParams
@@ -14,12 +16,16 @@ export default async function Approved({
   try {
     const { supabase, user } = await requireAdmin('/approved');
     const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-    const { data, error } = await (db as any)
-    .from('candidate_profiles_admin')
-    .select('*')
-    .eq('approval_status', 'approved');
+    const { data, error } = await queryMaybeExcludingDeleted(async (excludeDeleted) => {
+      let approvedQuery = (db as any)
+        .from('candidate_profiles_admin')
+        .select('*')
+        .eq('approval_status', 'approved');
+      if (excludeDeleted) approvedQuery = approvedQuery.is('deleted_at', null);
+      return approvedQuery;
+    });
     const query = listSearchQuery(searchParams?.q);
-    const rows = (data ?? []).filter((row: any) => matchesListQuery(row, query));
+    const rows = excludeSoftDeletedRows(data).filter((row: any) => matchesListQuery(row, query));
 
   // Also fetch current elected ids so we can mark “Promoted” in the approved list.
   const { data: electedRows } = await (db as any)
@@ -86,6 +92,7 @@ export default async function Approved({
                 <div>
                   <div className="row">
                     <h3 style={{ margin: 0 }}>{row.display_name ?? row.email ?? 'Candidate'}</h3>
+                    <TestCandidateBadge email={row.email} />
                     {isElected && (
                       <span className="badge">
                         Promoted

@@ -143,3 +143,5 @@ vite.config.ts.timestamp-*
 
 # Editor workspace files
 *.code-workspace
+.vercel
+.env*

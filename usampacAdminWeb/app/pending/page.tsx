@@ -5,6 +5,8 @@ import AdminHeader from '@/app/components/AdminHeader';
 import { requireAdmin } from '@/lib/requireAdmin';
 import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
 import ListSearch from '@/app/components/ListSearch';
+import TestCandidateBadge from '@/app/components/TestCandidateBadge';
+import { excludeSoftDeletedRows, queryMaybeExcludingDeleted } from '@/lib/candidateSoftDelete';
 
 export default async function Pending({
   searchParams
@@ -16,10 +18,12 @@ export default async function Pending({
     const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
 
     const query = listSearchQuery(searchParams?.q);
-    const { data, error } = await (db as any)
-      .from('candidate_profiles_pending')
-      .select('*');
-    const rows = (data ?? []).filter((row: any) => matchesListQuery(row, query));
+    const { data, error } = await queryMaybeExcludingDeleted(async (excludeDeleted) => {
+      let pendingQuery = (db as any).from('candidate_profiles_pending').select('*');
+      if (excludeDeleted) pendingQuery = pendingQuery.is('deleted_at', null);
+      return pendingQuery;
+    });
+    const rows = excludeSoftDeletedRows(data).filter((row: any) => matchesListQuery(row, query));
 
     return (
     <>
@@ -70,7 +74,10 @@ export default async function Pending({
                 <div className="avatarFallback">?</div>
               )}
               <div>
-              <h3 style={{ margin: 0 }}>{row.display_name ?? row.email ?? 'Candidate'}</h3>
+              <div className="row">
+                <h3 style={{ margin: 0 }}>{row.display_name ?? row.email ?? 'Candidate'}</h3>
+                <TestCandidateBadge email={row.email} />
+              </div>
               <div className="muted" style={{ marginTop: 4 }}>
                 {(row.office_level ?? row.office_type ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
                 | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Election Year: {(row.cycle ?? '-')}

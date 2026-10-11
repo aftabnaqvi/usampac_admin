@@ -1,0 +1,4 @@
+-- Superseded by sql/candidate_soft_delete.sql
+--
+-- Manage delete is a flag (deleted_at), not a row remove.
+-- Run candidate_soft_delete.sql (Inspect, then Apply).

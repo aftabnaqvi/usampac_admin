@@ -1,5 +1,6 @@
 import AdminHeader from '@/app/components/AdminHeader';
 import { requireAdmin } from '@/lib/requireAdmin';
+import { excludeSoftDeletedRows, queryMaybeExcludingDeleted } from '@/lib/candidateSoftDelete';
 import { deleteCandidate, deleteElected, restoreCandidate, restoreElected } from './actions';
 import ConfirmButton from './ConfirmButton';
 import ListSearch from '@/app/components/ListSearch';
@@ -15,17 +16,24 @@ export default async function ManagePage({
   const query = (searchParams?.q ?? '').trim();
   const searchPattern = query ? `%${query.replace(/%/g, '\\%').replace(/_/g, '\\_')}%` : null;
 
-  let candidatesQuery = db
-    .from('candidate_profiles_admin')
-    .select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approval_status')
-    .order('display_name', { ascending: true })
-    .limit(5000);
-  if (searchPattern) {
-    candidatesQuery = candidatesQuery.or(
-      `display_name.ilike.${searchPattern},email.ilike.${searchPattern},office_name.ilike.${searchPattern},city_name.ilike.${searchPattern}`
-    );
-  }
-  const { data: candidates, error: candidatesError } = await candidatesQuery;
+  const candidatesResult = await queryMaybeExcludingDeleted(async (excludeDeleted) => {
+    let candidatesQuery = db
+      .from('candidate_profiles_admin')
+      .select('user_id,display_name,email,office_level,office_name,city_name,state_code,cycle,approval_status,deleted_at')
+      .order('display_name', { ascending: true })
+      .limit(5000);
+    if (excludeDeleted) {
+      candidatesQuery = candidatesQuery.is('deleted_at', null);
+    }
+    if (searchPattern) {
+      candidatesQuery = candidatesQuery.or(
+        `display_name.ilike.${searchPattern},email.ilike.${searchPattern},office_name.ilike.${searchPattern},city_name.ilike.${searchPattern}`
+      );
+    }
+    return candidatesQuery;
+  });
+  const candidates = excludeSoftDeletedRows(candidatesResult.data);
+  const candidatesError = candidatesResult.error;
 
   // Prefer active_elected_public when present.
   let electedAttempt = await db
@@ -103,7 +111,7 @@ export default async function ManagePage({
 
       {searchParams?.success && (
         <p className="flashOk">
-          {searchParams.success === 'candidate' && 'Candidate deleted.'}
+          {searchParams.success === 'candidate' && 'Candidate hidden. You can restore it from Deleted Candidates.'}
           {searchParams.success === 'elected' && 'Elected official deleted.'}
           {searchParams.success === 'restore_candidate' && 'Candidate restored.'}
           {searchParams.success === 'restore_elected' && 'Elected official restored.'}
@@ -144,7 +152,7 @@ export default async function ManagePage({
                 <input type="hidden" name="user_id" value={row.user_id} />
                 <ConfirmButton
                   type="submit"
-                  confirmMessage="Delete this candidate? You can restore it later from the Deleted Candidates list."
+                  confirmMessage="Hide this candidate from the public list? The profile stays in the database and you can restore it later."
                   className="btnDanger"
                   title="Delete candidate (moves to deleted list)"
                 >

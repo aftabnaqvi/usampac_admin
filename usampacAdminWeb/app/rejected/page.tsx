@@ -3,6 +3,8 @@ import AdminHeader from '@/app/components/AdminHeader';
 import { requireAdmin } from '@/lib/requireAdmin';
 import { listSearchQuery, matchesListQuery } from '@/lib/listSearch';
 import ListSearch from '@/app/components/ListSearch';
+import TestCandidateBadge from '@/app/components/TestCandidateBadge';
+import { excludeSoftDeletedRows, queryMaybeExcludingDeleted } from '@/lib/candidateSoftDelete';
 
 function photoUrlOf(row: any): string | null {
   const value = row?.photo_url ?? row?.photo ?? row?.image_url;
@@ -16,12 +18,16 @@ export default async function Rejected({
 }) {
   const { supabase, user } = await requireAdmin('/rejected');
   const db = (supabase as any).schema ? (supabase as any).schema('api') : supabase;
-  const { data, error } = await (db as any)
-    .from('candidate_profiles_admin')
-    .select('*')
-    .eq('approval_status', 'rejected');
+  const { data, error } = await queryMaybeExcludingDeleted(async (excludeDeleted) => {
+    let rejectedQuery = (db as any)
+      .from('candidate_profiles_admin')
+      .select('*')
+      .eq('approval_status', 'rejected');
+    if (excludeDeleted) rejectedQuery = rejectedQuery.is('deleted_at', null);
+    return rejectedQuery;
+  });
 
-  let rows = data ?? [];
+  let rows = excludeSoftDeletedRows(data);
   const missingIds = rows.filter((row: any) => !photoUrlOf(row)).map((row: any) => String(row.user_id));
   if (missingIds.length > 0) {
     const { data: profiles } = await db
@@ -74,7 +80,10 @@ export default async function Rejected({
               <div className="avatarFallback">{(name.trim()[0] || '?').toUpperCase()}</div>
             )}
             <div>
-              <h3 style={{ margin: 0 }}>{name}</h3>
+              <div className="row">
+                <h3 style={{ margin: 0 }}>{name}</h3>
+                <TestCandidateBadge email={row.email} />
+              </div>
               <div className="muted" style={{ marginTop: 4 }}>
                 {(row.office_level ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
                 | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Election Year: {(row.cycle ?? '-')}

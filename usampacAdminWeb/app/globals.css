@@ -428,6 +428,12 @@ a.btnPrimary:hover {
   color: var(--success);
 }
 
+.badgeTest {
+  background: rgba(10, 31, 99, 0.10);
+  border-color: rgba(10, 31, 99, 0.35);
+  color: var(--navy);
+}
+
 .loginWrap {
   min-height: 100%;
   display: flex;
