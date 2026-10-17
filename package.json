@@ -3,9 +3,9 @@
   "private": true,
   "description": "USAMPAC admin (web + SQL scripts)",
   "scripts": {
-    "test": "node sql/test-sqls.mjs && npx --yes tsx --test usampacAdminWeb/lib/*.test.ts",
+    "test": "npm run test:sql && npm run test:web",
     "test:sql": "node sql/test-sqls.mjs",
-    "test:web": "npx --yes tsx --test usampacAdminWeb/lib/*.test.ts"
+    "test:web": "npm test --prefix usampacAdminWeb"
   },
   "type": "module"
 }
