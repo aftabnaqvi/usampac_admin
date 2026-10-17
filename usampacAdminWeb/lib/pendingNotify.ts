@@ -250,6 +250,7 @@ async function sendViaFormSubmit(to: string[], subject: string, text: string): P
   const origin = adminAppUrl();
   const payload = JSON.stringify(formSubmitPayload(subject, text));
   let sent = false;
+  const failures: string[] = [];
   lastAdminEmailFailure = null;
   for (const email of to) {
     try {
@@ -268,13 +269,15 @@ async function sendViaFormSubmit(to: string[], subject: string, text: string): P
       if (response.ok && formSubmitAccepted(body)) {
         sent = true;
       } else {
-        lastAdminEmailFailure = `FormSubmit ${response.status} for ${email}: ${body.replace(/\s+/g, ' ').slice(0, 160)}`;
-        console.error('admin email:', lastAdminEmailFailure);
+        failures.push(`FormSubmit ${response.status} for ${email}: ${body.replace(/\s+/g, ' ').slice(0, 160)}`);
       }
     } catch (error) {
-      lastAdminEmailFailure = `FormSubmit error for ${email}: ${error instanceof Error ? error.message : String(error)}`;
-      console.error('admin email:', lastAdminEmailFailure);
+      failures.push(`FormSubmit error for ${email}: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+  if (failures.length > 0) {
+    lastAdminEmailFailure = failures.join(' | ');
+    console.error('admin email:', lastAdminEmailFailure);
   }
   return sent;
 }
