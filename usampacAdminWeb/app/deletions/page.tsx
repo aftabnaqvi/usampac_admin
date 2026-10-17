@@ -1,6 +1,7 @@
 import AdminHeader from '@/app/components/AdminHeader';
 import ListSearch from '@/app/components/ListSearch';
 import ConfirmButton from '@/app/manage/ConfirmButton';
+import TestCandidateBadge from '@/app/components/TestCandidateBadge';
 import {
   ACCOUNT_DELETION_GRACE_DAYS,
   ACCOUNT_DELETION_SQL_HINT,
@@ -92,10 +93,14 @@ export default async function DeletionsPage({
               <article key={r.user_id} className="card">
                 <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <strong>{r.email ?? r.user_id}</strong>
+                    <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                      <strong>{r.email ?? r.user_id}</strong>
+                      <TestCandidateBadge email={r.email} />
+                    </div>
                     <div className="muted" style={{ marginTop: 4 }}>
                       Requested {when(r.requested_at)} · Deletes {when(r.delete_after)}
                       {isDeletionDue(r) ? ' (due now)' : ''}
+                      {r.notified_at ? ` · Admins emailed ${when(r.notified_at)}` : ' · Admins not emailed yet'}
                     </div>
                     {skip && <div className="muted" style={{ marginTop: 4 }}>{skipReasonLabel(skip)}</div>}
                     {r.last_error && <div className="flashErr" style={{ marginTop: 6 }}>Last attempt: {r.last_error}</div>}

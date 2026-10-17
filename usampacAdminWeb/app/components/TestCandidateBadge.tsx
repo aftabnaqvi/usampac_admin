@@ -1,6 +1,12 @@
-import { isHiddenTestCandidateEmail } from '@/lib/hiddenTestCandidate';
+import { hiddenCandidateBadge, hiddenCandidateKind } from '@/lib/hiddenTestCandidate';
 
 export default function TestCandidateBadge({ email }: { email?: string | null }) {
-  if (!isHiddenTestCandidateEmail(email)) return null;
-  return <span className="badge badgeTest">TEST</span>;
+  const kind = hiddenCandidateKind(email);
+  if (!kind) return null;
+  const { label, title } = hiddenCandidateBadge(kind);
+  return (
+    <span className="badge badgeTest" title={title}>
+      {label}
+    </span>
+  );
 }

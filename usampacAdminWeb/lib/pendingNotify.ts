@@ -204,15 +204,19 @@ async function sendResendEmail(
   name: string,
   details: string
 ) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.ADMIN_NOTIFY_FROM;
-  if (!apiKey || !from || to.length === 0) return false;
-
   const html = `
     <p><strong>${escapeHtml(name)}</strong> submitted a candidate profile and is waiting for approval.</p>
     ${details ? `<p>${escapeHtml(details)}</p>` : ''}
     <p><a href="${escapeHtml(pendingUrl)}">Open pending candidates</a></p>
   `;
+  return sendAdminEmail(to, subject, text, html);
+}
+
+/** One Resend call for every admin notification. False when email is not configured. */
+export async function sendAdminEmail(to: string[], subject: string, text: string, html: string): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.ADMIN_NOTIFY_FROM;
+  if (!apiKey || !from || to.length === 0) return false;
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -257,7 +261,7 @@ async function sendTwilioSms(to: string[], body: string) {
   return sent;
 }
 
-function escapeHtml(value: string) {
+export function escapeHtml(value: string) {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

@@ -22,7 +22,8 @@ create table if not exists public.account_deletion_requests (
     check (status in ('pending', 'cancelled', 'completed')),
   cancelled_at timestamptz,
   completed_at timestamptz,
-  last_error text
+  last_error text,
+  notified_at timestamptz
 );
 
 create index if not exists account_deletion_requests_due_idx
@@ -62,7 +63,8 @@ select user_id,
        status,
        cancelled_at,
        completed_at,
-       last_error
+       last_error,
+       notified_at
 from public.account_deletion_requests;
 
 revoke all on api.account_deletion_requests from anon, authenticated;

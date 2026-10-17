@@ -18,7 +18,26 @@ export type DeletionRequestRow = {
   cancelled_at?: string | null;
   completed_at?: string | null;
   last_error?: string | null;
+  /** Set once admins were emailed about the request (account_deletion_notify.sql). */
+  notified_at?: string | null;
 };
+
+/** user_id → delete_after for every pending request; used to flag rows on Manage. */
+export async function pendingDeletionsByUser(admin: {
+  schema?: (name: string) => any;
+  from: (table: string) => any;
+}): Promise<Map<string, string>> {
+  const db = typeof admin.schema === 'function' ? admin.schema('api') : admin;
+  const { data, error } = await db
+    .from('account_deletion_requests')
+    .select('user_id,delete_after')
+    .eq('status', 'pending')
+    .limit(1000);
+  if (error) return new Map();
+  return new Map(
+    ((data ?? []) as Pick<DeletionRequestRow, 'user_id' | 'delete_after'>[]).map((r) => [r.user_id, r.delete_after])
+  );
+}
 
 export type DeletionSkipReason = 'protected' | 'app_review';
 

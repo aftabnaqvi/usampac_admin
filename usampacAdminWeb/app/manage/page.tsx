@@ -4,6 +4,9 @@ import { excludeSoftDeletedRows, queryMaybeExcludingDeleted } from '@/lib/candid
 import { deleteCandidate, deleteElected, restoreCandidate, restoreElected } from './actions';
 import ConfirmButton from './ConfirmButton';
 import ListSearch from '@/app/components/ListSearch';
+import TestCandidateBadge from '@/app/components/TestCandidateBadge';
+import { pendingDeletionsByUser } from '@/lib/accountDeletion';
+import { formatDeletionDate } from '@/lib/deletionNotify';
 
 export default async function ManagePage({
   searchParams
@@ -34,6 +37,7 @@ export default async function ManagePage({
   });
   const candidates = excludeSoftDeletedRows(candidatesResult.data);
   const candidatesError = candidatesResult.error;
+  const pendingDeletions = await pendingDeletionsByUser(db);
 
   // Prefer active_elected_public when present.
   let electedAttempt = await db
@@ -133,7 +137,10 @@ export default async function ManagePage({
           <article key={row.user_id} className="card">
             <div className="row" style={{ justifyContent: 'space-between' }}>
               <div>
-                <strong>{row.display_name ?? row.email ?? 'Candidate'}</strong>
+                <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                  <strong>{row.display_name ?? row.email ?? 'Candidate'}</strong>
+                  <TestCandidateBadge email={row.email} />
+                </div>
                 <div className="muted" style={{ marginTop: 4 }}>
                   {(row.office_level ?? '-') + ' — ' + (row.office_name ?? '-')}{' '}
                   | {(row.city_name ?? '-')} , {(row.state_code ?? '-')} | Cycle: {(row.cycle ?? '-')}
@@ -141,6 +148,12 @@ export default async function ManagePage({
                 <div className="muted" style={{ marginTop: 4 }}>
                   Status: {row.approval_status ?? '—'}
                 </div>
+                {pendingDeletions.has(row.user_id) && (
+                  <div className="deletionFlag" style={{ marginTop: 6 }}>
+                    Deletion requested in the app · deletes {formatDeletionDate(pendingDeletions.get(row.user_id))} ·{' '}
+                    <a href="/deletions">Open Deletions</a>
+                  </div>
+                )}
               </div>
               <form
                 action={async (fd: FormData) => {

@@ -434,6 +434,22 @@ a.btnPrimary:hover {
   color: var(--navy);
 }
 
+/* Manage: this candidate asked to delete their account in the app. */
+.deletionFlag {
+  display: inline-block;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(180, 83, 9, 0.10);
+  border: 1px solid rgba(180, 83, 9, 0.35);
+  color: #9a3d00;
+}
+
+.deletionFlag a {
+  color: inherit;
+  font-weight: 600;
+}
+
 .loginWrap {
   min-height: 100%;
   display: flex;
