@@ -1,3 +1,4 @@
+import { hiddenCandidateKind } from '@/lib/hiddenTestCandidate';
 import { isProtectedPerson } from '@/lib/protectedPeople';
 
 export const ACCOUNT_DELETION_GRACE_DAYS = 30;
@@ -53,6 +54,20 @@ export function deletionSkipReason(row: Pick<DeletionRequestRow, 'user_id' | 'em
   if (isProtectedPerson(row.user_id, row.email)) return 'protected';
   if (isAppReviewAccount(row.user_id, row.email)) return 'app_review';
   return null;
+}
+
+/** History keeps the request email so admins can see who was deleted. */
+export function deletionFinishedMessage(archived: boolean): string {
+  return archived
+    ? 'Account deleted. The approved listing was kept in the archive.'
+    : 'Account deleted. No listing was archived.';
+}
+
+export function deleteNowConfirmMessage(email: string | null | undefined): string {
+  if (hiddenCandidateKind(email) === 'test') {
+    return 'Delete this test account now? The login and profile are removed. Nothing is archived, so this email can register again.';
+  }
+  return 'Delete this account now? The login, profile, and photo are removed permanently. An approved listing is kept in the archive.';
 }
 
 export function skipReasonLabel(reason: DeletionSkipReason): string {
@@ -136,7 +151,7 @@ export async function processAccountDeletion(admin: AdminClient, userId: string)
 
     const { error: doneError } = await api(admin)
       .from('account_deletion_requests')
-      .update({ status: 'completed', completed_at: new Date().toISOString(), email: null, last_error: null })
+      .update({ status: 'completed', completed_at: new Date().toISOString(), last_error: null })
       .eq('user_id', userId);
     if (doneError) throw new Error(doneError.message);
 

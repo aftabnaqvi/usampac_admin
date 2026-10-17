@@ -38,6 +38,8 @@ begin
 
   delete from public.candidate_profiles where user_id = p_user_id;
   delete from public.app_users where auth_sub = p_user_id;
+  -- api.app_users stores the login id and a unique email. Leaving the row blocks that email from registering again.
+  delete from api.app_users where id = p_user_id;
 end;
 $$;
 

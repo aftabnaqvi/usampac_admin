@@ -81,6 +81,9 @@ begin
   raise notice 'PASS 3: pending candidate removed without archive';
 
   -- 4. Operator test emails: removed, never archived (case/space insensitive).
+  --    Also drop the api.app_users row, whose email is unique and otherwise blocks re-registration.
+  insert into api.app_users (id, email, persona_requested)
+  values (v_test, 'livetest.dummy.appuser@example.com', 'CANDIDATE');
   perform api.archive_and_remove_account_rows(v_test);
   perform api.archive_and_remove_account_rows(v_review);
   if exists (select 1 from public.candidate_archive where former_user_id in (v_test, v_review)) then
@@ -88,6 +91,9 @@ begin
   end if;
   if exists (select 1 from public.candidate_profiles where user_id in (v_test, v_review)) then
     raise exception 'FAIL 4: test / app-review profile still present';
+  end if;
+  if exists (select 1 from api.app_users where id = v_test) then
+    raise exception 'FAIL 4: api.app_users row still present';
   end if;
   raise notice 'PASS 4: +test and +applereview removed without archive';
 

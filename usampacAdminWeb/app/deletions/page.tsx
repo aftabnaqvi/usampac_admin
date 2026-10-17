@@ -5,6 +5,8 @@ import TestCandidateBadge from '@/app/components/TestCandidateBadge';
 import {
   ACCOUNT_DELETION_GRACE_DAYS,
   ACCOUNT_DELETION_SQL_HINT,
+  deleteNowConfirmMessage,
+  deletionFinishedMessage,
   deletionSkipReason,
   isDeletionDue,
   isMissingDeletionSchema,
@@ -76,7 +78,8 @@ export default async function DeletionsPage({
           </div>
         </header>
 
-        {searchParams?.success === 'deleted' && <p className="flashOk">Account deleted. The listing was archived.</p>}
+        {searchParams?.success === 'archived' && <p className="flashOk">{deletionFinishedMessage(true)}</p>}
+        {searchParams?.success === 'deleted' && <p className="flashOk">{deletionFinishedMessage(false)}</p>}
         {searchParams?.success === 'cancelled' && <p className="flashOk">Deletion request cancelled.</p>}
         {searchParams?.error && <p className="flashErr">Action failed: {searchParams.error}</p>}
         {schemaMissing && <p className="flashErr">{ACCOUNT_DELETION_SQL_HINT}</p>}
@@ -115,7 +118,7 @@ export default async function DeletionsPage({
                       >
                         <ConfirmButton
                           type="submit"
-                          confirmMessage="Delete this account now? The login, profile, and photo are removed permanently. An approved listing is kept in the archive."
+                          confirmMessage={deleteNowConfirmMessage(r.email)}
                           className="btnDanger"
                         >
                           Delete now
@@ -159,7 +162,10 @@ export default async function DeletionsPage({
           {history.length === 0 && <p>No completed or cancelled requests.</p>}
           {history.map((r) => (
             <article key={r.user_id} className="card">
-              <strong>{r.email ?? 'Deleted account'}</strong>
+              <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                <strong>{r.email ?? 'Deleted account'}</strong>
+                <TestCandidateBadge email={r.email} />
+              </div>
               <div className="muted" style={{ marginTop: 4 }}>
                 {r.status === 'completed' ? `Deleted ${when(r.completed_at)}` : `Cancelled ${when(r.cancelled_at)}`} ·
                 Requested {when(r.requested_at)}

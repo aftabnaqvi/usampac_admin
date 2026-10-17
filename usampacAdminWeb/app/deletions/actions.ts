@@ -11,7 +11,16 @@ export async function deleteAccountNow(userId: string) {
   const outcome = await processAccountDeletion(supabaseAdmin() as any, userId);
   revalidatePath('/deletions');
 
-  if (outcome.result === 'deleted') redirect('/deletions?success=deleted');
+  if (outcome.result === 'deleted') {
+    const { data } = await supabaseAdminApi()
+      .from('candidate_archive')
+      .select('id')
+      .eq('former_user_id', userId)
+      .eq('reason', 'account_deleted')
+      .limit(1);
+    const archived = Array.isArray(data) && data.length > 0;
+    redirect(`/deletions?success=${archived ? 'archived' : 'deleted'}`);
+  }
   if (outcome.result === 'failed') redirect(`/deletions?error=${encodeURIComponent(outcome.error)}`);
   const message =
     outcome.reason === 'not_pending' ? 'This request is no longer pending.' : skipReasonLabel(outcome.reason);

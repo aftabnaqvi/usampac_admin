@@ -272,6 +272,7 @@ describe('SQL scripts', () => {
       const fn = (text) => text.match(/create or replace function api\.archive_and_remove_account_rows[\s\S]*?\$\$;/i)?.[0]
         .replace(/--[^\n]*/g, '').replace(/\s+/g, ' ').trim();
       assert.equal(fn(patch), fn(del), 'account_deletion_test_accounts.sql drifted from account_deletion.sql');
+      assert.ok(fn(del).includes('delete from api.app_users where id = p_user_id'), 'deletion clears the unique api.app_users email');
     });
 
     it('candidate RPCs run as the caller only; the remove RPC is service_role only', () => {

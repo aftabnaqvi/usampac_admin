@@ -7,6 +7,8 @@ import {
   isDeletionDue,
   isMissingDeletionSchema,
   pendingDeletionsByUser,
+  deleteNowConfirmMessage,
+  deletionFinishedMessage,
   processAccountDeletion,
   processDueAccountDeletions,
   profilePhotoPaths,
@@ -133,7 +135,14 @@ describe('accountDeletion', () => {
     assert.deepEqual(calls[0].args, ['archive_and_remove_account_rows', { p_user_id: DUMMY_ID }]);
     const done = table.get(DUMMY_ID)!;
     assert.equal(done.status, 'completed');
-    assert.equal(done.email, null);
+    assert.equal(done.email, 'naqviasyed+test@gmail.com');
+  });
+
+  it('keeps the email in the finished message and does not claim a test account was archived', () => {
+    assert.equal(deletionFinishedMessage(true), 'Account deleted. The approved listing was kept in the archive.');
+    assert.equal(deletionFinishedMessage(false), 'Account deleted. No listing was archived.');
+    assert.match(deleteNowConfirmMessage('naqviasyed+test@gmail.com'), /Nothing is archived/);
+    assert.match(deleteNowConfirmMessage('someone@example.com'), /kept in the archive/);
   });
 
   it('does not touch a protected person even with a pending request', async () => {
