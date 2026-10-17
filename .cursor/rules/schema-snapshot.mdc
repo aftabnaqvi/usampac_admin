@@ -1,0 +1,14 @@
+---
+description: Save a schema-only database snapshot on every release or big change
+alwaysApply: true
+---
+
+# Schema snapshot
+
+On every release or big database change, save a copy of the live schema and push it to the admin GitHub repo (`usampac_admin`).
+
+1. Run `sql/schema/export-live-schema.sql` against the live database.
+2. Save the single result as `sql/schema/YYYY-MM-DD-short-slug.sql`.
+3. Commit that file and push it.
+
+The snapshot is schema only: tables, views, functions, policies, and grants for `public` and `api`. Do not include table rows, passwords, service keys, or storage files.
