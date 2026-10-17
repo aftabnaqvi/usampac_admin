@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { notifyAdminsOfDeletion, parseDeletionEvent } from '@/lib/deletionNotify';
-import { isWebhookAuthorized } from '@/lib/pendingNotify';
+import { isWebhookAuthorized, lastAdminEmailError } from '@/lib/pendingNotify';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
@@ -40,7 +40,8 @@ export async function POST(request: Request) {
 
   try {
     const result = await notifyAdminsOfDeletion(userId, event);
-    return NextResponse.json({ ok: true, event, ...result });
+    const detail = result.sent ? undefined : lastAdminEmailError() ?? undefined;
+    return NextResponse.json({ ok: true, event, ...result, ...(detail ? { detail } : {}) });
   } catch (error: any) {
     console.error('account-deletions/notify failed', error);
     return NextResponse.json({ ok: false, error: error?.message ?? 'Notify failed' }, { status: 500 });

@@ -239,10 +239,18 @@ export function formSubmitAccepted(body: string): boolean {
   return body.includes('"success":"true"') || body.includes('"success": true') || body.includes('"success":true');
 }
 
+let lastAdminEmailFailure: string | null = null;
+
+/** Why the most recent sendAdminEmail returned false (for API responses and logs). */
+export function lastAdminEmailError(): string | null {
+  return lastAdminEmailFailure;
+}
+
 async function sendViaFormSubmit(to: string[], subject: string, text: string): Promise<boolean> {
   const origin = adminAppUrl();
   const payload = JSON.stringify(formSubmitPayload(subject, text));
   let sent = false;
+  lastAdminEmailFailure = null;
   for (const email of to) {
     try {
       const response = await fetch(formSubmitUrl(email), {
@@ -251,7 +259,8 @@ async function sendViaFormSubmit(to: string[], subject: string, text: string): P
           'Content-Type': 'application/json',
           Accept: 'application/json',
           Origin: origin,
-          Referer: `${origin}/`
+          Referer: `${origin}/`,
+          'User-Agent': 'Mozilla/5.0 (compatible; USAMPAC-admin/1.0; +https://usampac.org)'
         },
         body: payload
       });
@@ -259,10 +268,12 @@ async function sendViaFormSubmit(to: string[], subject: string, text: string): P
       if (response.ok && formSubmitAccepted(body)) {
         sent = true;
       } else {
-        console.error('admin email: FormSubmit refused', email, response.status, body.slice(0, 200));
+        lastAdminEmailFailure = `FormSubmit ${response.status} for ${email}: ${body.replace(/\s+/g, ' ').slice(0, 160)}`;
+        console.error('admin email:', lastAdminEmailFailure);
       }
     } catch (error) {
-      console.error('admin email: FormSubmit failed', email, error);
+      lastAdminEmailFailure = `FormSubmit error for ${email}: ${error instanceof Error ? error.message : String(error)}`;
+      console.error('admin email:', lastAdminEmailFailure);
     }
   }
   return sent;
