@@ -6,6 +6,7 @@ import {
   deletionSkipReason,
   isDeletionDue,
   isMissingDeletionSchema,
+  pendingDeletionsByUser,
   processAccountDeletion,
   processDueAccountDeletions,
   profilePhotoPaths,
@@ -36,6 +37,7 @@ function fakeAdmin(rows: DeletionRequestRow[], opts: { rpcError?: string; authEr
     let patch: Partial<DeletionRequestRow> | null = null;
     const builder: any = {
       select: () => builder,
+      limit: () => builder,
       update: (values: Partial<DeletionRequestRow>) => {
         patch = values;
         return builder;
@@ -149,6 +151,16 @@ describe('accountDeletion', () => {
     assert.equal(calls.some((c) => c.op === 'auth.deleteUser'), false);
     assert.equal(table.get(DUMMY_ID)!.status, 'pending');
     assert.equal(table.get(DUMMY_ID)!.last_error, 'boom');
+  });
+
+  it('Manage flags only candidates with a pending request', async () => {
+    const { client } = fakeAdmin([
+      pendingRow({ user_id: 'p1', delete_after: '2026-11-15T00:00:00Z' }),
+      pendingRow({ user_id: 'c1', status: 'cancelled' }),
+      pendingRow({ user_id: 'd1', status: 'completed' })
+    ]);
+    const flags = await pendingDeletionsByUser(client as any);
+    assert.deepEqual([...flags.entries()], [['p1', '2026-11-15T00:00:00Z']]);
   });
 
   it('daily run only deletes requests past their waiting period', async () => {

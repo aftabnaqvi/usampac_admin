@@ -1,6 +1,45 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { deletionEmail, formatDeletionDate, needsDeletionNotice, parseDeletionEvent } from './deletionNotify';
+import {
+  deletionEmail,
+  formatDeletionDate,
+  needsDeletionNotice,
+  notifyAdminsOfDeletion,
+  notifyUnannouncedDeletionRequests,
+  parseDeletionEvent
+} from './deletionNotify';
+
+type Row = Record<string, unknown>;
+
+/** Minimal PostgREST-style fake: one table of deletion requests, one of profiles. */
+function fakeAdmin(requests: Row[], profiles: Row[] = []) {
+  const updates: Array<{ patch: Row; user_id: unknown }> = [];
+  const tables: Record<string, Row[]> = { account_deletion_requests: requests, candidate_profiles: profiles };
+  function query(name: string) {
+    const rows = tables[name] ?? [];
+    const filters: Array<(r: Row) => boolean> = [];
+    let patch: Row | null = null;
+    const builder: any = {
+      select: () => builder,
+      update: (values: Row) => ((patch = values), builder),
+      eq: (col: string, value: unknown) => (filters.push((r) => r[col] === value), builder),
+      is: (col: string, value: unknown) => (filters.push((r) => (r[col] ?? null) === value), builder),
+      maybeSingle: async () => ({ data: rows.find((r) => filters.every((f) => f(r))) ?? null, error: null }),
+      then: (resolve: (v: unknown) => void) => {
+        const matched = rows.filter((r) => filters.every((f) => f(r)));
+        if (patch) {
+          for (const r of matched) {
+            Object.assign(r, patch);
+            updates.push({ patch, user_id: r.user_id });
+          }
+        }
+        resolve({ data: matched, error: null });
+      }
+    };
+    return builder;
+  }
+  return { client: { from: query }, updates };
+}
 
 const request = {
   email: 'naqviasyed+test@gmail.com',
@@ -62,6 +101,37 @@ describe('deletionNotify', () => {
     const mail = deletionEmail('requested', request, { ...candidate, display_name: '<img src=x>' }, 'https://a');
     assert.doesNotMatch(mail.html, /<img/);
     assert.match(mail.html, /&lt;img src=x&gt;/);
+  });
+
+  it('refuses to announce a request that is not in the state the event claims', async () => {
+    const pending = { user_id: 'u1', email: 'a@example.com', status: 'pending', delete_after: request.delete_after };
+    const cancelled = { user_id: 'u2', email: 'b@example.com', status: 'cancelled', delete_after: request.delete_after };
+    const { client } = fakeAdmin([pending, cancelled]);
+    assert.deepEqual(await notifyAdminsOfDeletion('nobody', 'requested', client), { sent: false, skipped: 'no_request' });
+    assert.deepEqual(await notifyAdminsOfDeletion('u2', 'requested', client), { sent: false, skipped: 'not_pending' });
+    assert.deepEqual(await notifyAdminsOfDeletion('u1', 'cancelled', client), { sent: false, skipped: 'not_cancelled' });
+  });
+
+  it('does not stamp notified_at when no email went out, so the cron retries it', async () => {
+    // No RESEND_API_KEY / ADMIN_NOTIFY_FROM in tests → sendAdminEmail returns false.
+    const row = { user_id: 'u1', email: 'a@example.com', status: 'pending', delete_after: request.delete_after, notified_at: null };
+    const { client, updates } = fakeAdmin([row]);
+    const result = await notifyAdminsOfDeletion('u1', 'requested', client);
+    assert.equal(result.sent, false);
+    assert.equal(updates.length, 0);
+    assert.equal(row.notified_at, null);
+  });
+
+  it('cron fallback looks only at pending rows with no notified_at', async () => {
+    const rows = [
+      { user_id: 'fresh', email: 'a@example.com', status: 'pending', delete_after: request.delete_after, notified_at: null },
+      { user_id: 'told', email: 'b@example.com', status: 'pending', delete_after: request.delete_after, notified_at: '2026-10-17T06:00:00Z' },
+      { user_id: 'gone', email: 'c@example.com', status: 'cancelled', delete_after: request.delete_after, notified_at: null }
+    ];
+    const { client } = fakeAdmin(rows);
+    const result = await notifyUnannouncedDeletionRequests(client);
+    assert.equal(result.checked, 1);
+    assert.equal(result.notified, 0); // email not configured in tests
   });
 
   it('cron fallback only re-sends pending requests that were never announced', () => {

@@ -168,6 +168,8 @@ begin
     raise exception 'protected account cannot be deleted';
   end if;
 
+  -- Operator test accounts are not election history: delete them outright.
+  -- Same exact emails as hide_test_candidates.sql.
   insert into public.candidate_archive (
     former_user_id, display_name, party, office_level, office_name,
     state_code, city_name, cycle, incumbency, reason
@@ -177,6 +179,10 @@ begin
   from public.candidate_profiles cp
   where cp.user_id = p_user_id
     and cp.approval_status = 'approved'::approval_status
+    and lower(trim(coalesce(cp.email, ''))) not in (
+      'naqviasyed+test@gmail.com',
+      'naqviasyed+applereview@gmail.com'
+    )
   on conflict (former_user_id, reason) do nothing;
 
   delete from public.candidate_profiles where user_id = p_user_id;

@@ -204,6 +204,105 @@ describe('SQL scripts', () => {
     });
   });
 
+  // Account deletion spans three layers (iOS → Supabase SQL → admin site). These
+  // tests read the TypeScript sources too, so a value changed in one place fails here.
+  describe('account deletion (SQL ↔ admin site consistency)', () => {
+    const webLib = path.join(sqlDir, '..', 'usampacAdminWeb', 'lib');
+    const readTs = (name) => fs.readFileSync(path.join(webLib, name), 'utf8');
+    const HIDDEN_EMAILS = ['naqviasyed+test@gmail.com', 'naqviasyed+applereview@gmail.com'];
+    const PROTECTED_IDS = [
+      '68d5d58a-066a-4f79-a56d-c7095c335abf',
+      'ab7ca576-1089-4c3f-acf7-19ac54f773e3',
+      '7b966ddf-a3e6-41c8-ab1d-31645ef11f0b',
+      '712b3698-adfe-4411-b3ee-770812c6c31e',
+    ];
+
+    it('account_deletion.sql creates the request table with a 30-day default and notified_at', () => {
+      const { content, normalized } = readSql('account_deletion.sql');
+      assert.ok(/create\s+table\s+if\s+not\s+exists\s+public\.account_deletion_requests/i.test(content));
+      assert.ok(normalized.includes("default now() + interval '30 days'"), '30-day waiting period');
+      assert.ok(/notified_at\s+timestamptz/i.test(content), 'notified_at column for admin emails');
+      assert.ok(normalized.includes("check (status in ('pending', 'cancelled', 'completed'))"));
+      const ts = readTs('accountDeletion.ts');
+      assert.ok(/ACCOUNT_DELETION_GRACE_DAYS\s*=\s*30\b/.test(ts), 'admin site grace days must match SQL');
+    });
+
+    it('archive keeps election history only, never contact details', () => {
+      const { content } = readSql('account_deletion.sql');
+      const archive = content.match(/create\s+table\s+if\s+not\s+exists\s+public\.candidate_archive\s*\(([\s\S]*?)\);/i);
+      assert.ok(archive, 'candidate_archive table');
+      for (const col of ['display_name', 'party', 'office_level', 'office_name', 'state_code', 'city_name', 'cycle']) {
+        assert.ok(new RegExp(`\\b${col}\\b`).test(archive[1]), `archive keeps ${col}`);
+      }
+      for (const col of ['email', 'phone', 'photo_url', 'bio', 'website_url']) {
+        assert.ok(!new RegExp(`\\b${col}\\b`).test(archive[1]), `archive must not keep ${col}`);
+      }
+    });
+
+    it('the remove function refuses every protected id and the admin site lists the same ids', () => {
+      const { content } = readSql('account_deletion.sql');
+      const patch = readSql('account_deletion_test_accounts.sql').content;
+      const ts = readTs('protectedPeople.ts');
+      for (const id of PROTECTED_IDS) {
+        assert.ok(content.includes(id), `account_deletion.sql protects ${id}`);
+        assert.ok(patch.includes(id), `account_deletion_test_accounts.sql protects ${id}`);
+        assert.ok(ts.includes(id), `protectedPeople.ts protects ${id}`);
+      }
+      assert.ok(/raise\s+exception\s+'protected account cannot be deleted'/i.test(content));
+    });
+
+    it('test accounts are hidden from both public views and never archived, with one email list everywhere', () => {
+      const hide = readSql('hide_test_candidates.sql').content;
+      const del = readSql('account_deletion.sql').content;
+      const patch = readSql('account_deletion_test_accounts.sql').content;
+      const ts = readTs('hiddenTestCandidate.ts');
+      const count = (text, needle) => text.split(needle).length - 1;
+      for (const email of HIDDEN_EMAILS) {
+        assert.equal(count(hide, `'${email}'`), 2, `${email} filtered in both views of hide_test_candidates.sql`);
+        assert.ok(del.includes(`'${email}'`), `${email} skips the archive in account_deletion.sql`);
+        assert.ok(patch.includes(`'${email}'`), `${email} skips the archive in account_deletion_test_accounts.sql`);
+        assert.ok(ts.includes(`'${email}'`), `${email} badged by hiddenTestCandidate.ts`);
+      }
+      assert.ok(!/\+test@%|like\s+'%\+test/i.test(hide), 'exact emails only, never a +test wildcard');
+      assert.ok(/create\s+or\s+replace\s+view\s+api\.candidates_public/i.test(hide));
+      assert.ok(/create\s+or\s+replace\s+view\s+api\.candidates_by_city_prod/i.test(hide));
+      const hideCode = hide.replace(/--[^\n]*/g, '');
+      assert.equal(count(hideCode, 'deleted_at is null'), 2, 'soft-delete filter kept in both views');
+      // The function body in the patch file must equal the one in the base file.
+      const fn = (text) => text.match(/create or replace function api\.archive_and_remove_account_rows[\s\S]*?\$\$;/i)?.[0]
+        .replace(/--[^\n]*/g, '').replace(/\s+/g, ' ').trim();
+      assert.equal(fn(patch), fn(del), 'account_deletion_test_accounts.sql drifted from account_deletion.sql');
+    });
+
+    it('candidate RPCs run as the caller only; the remove RPC is service_role only', () => {
+      const { normalized } = readSql('account_deletion.sql');
+      for (const fn of ['my_account_deletion', 'request_account_deletion', 'cancel_account_deletion']) {
+        assert.ok(normalized.includes(`grant execute on function api.${fn}() to authenticated`), `${fn} for signed-in users`);
+        assert.ok(normalized.includes(`revoke all on function api.${fn}() from public, anon`), `${fn} not for anon`);
+      }
+      assert.ok(normalized.includes('grant execute on function api.archive_and_remove_account_rows(uuid) to service_role'));
+      assert.ok(normalized.includes('revoke all on function api.archive_and_remove_account_rows(uuid) from public, anon, authenticated'));
+      assert.ok(normalized.includes('where r.user_id = auth.uid()'), 'status is scoped to the caller');
+      assert.ok(normalized.includes('revoke all on public.account_deletion_requests from anon, authenticated'));
+      assert.ok(normalized.includes('revoke all on public.candidate_archive from anon, authenticated'));
+    });
+
+    it('notify migration adds notified_at and exposes it through the api view', () => {
+      const { content, normalized } = readSql('account_deletion_notify.sql');
+      assert.ok(/add\s+column\s+if\s+not\s+exists\s+notified_at\s+timestamptz/i.test(content));
+      assert.ok(/create\s+or\s+replace\s+view\s+api\.account_deletion_requests/i.test(content));
+      assert.ok(normalized.includes('notified_at from public.account_deletion_requests'));
+    });
+
+    it('live test only ever rolls back', () => {
+      const content = fs.readFileSync(path.join(sqlDir, 'tests', 'account_deletion_live_test.sql'), 'utf8');
+      assert.ok(/^\s*begin;/m.test(content));
+      assert.ok(/^\s*rollback;/m.test(content), 'must roll back');
+      assert.ok(!/^\s*commit;/m.test(content), 'must never commit');
+      assert.ok(content.indexOf('rollback;') > content.lastIndexOf('end $$;'), 'rollback after the assertions');
+    });
+  });
+
   describe('Safety and style', () => {
     it('no unsafe DROP without IF EXISTS in executable DDL', () => {
       const ddlFiles = ['admin_views_filing_columns.sql', 'state_election_agencies.sql'];
