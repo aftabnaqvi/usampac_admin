@@ -103,35 +103,73 @@ describe('deletionNotify', () => {
     assert.match(mail.html, /&lt;img src=x&gt;/);
   });
 
+  const admins = async () => ['admin1@example.com', 'admin2@example.com'];
+  function stubSender(outcome: boolean) {
+    const sent: Array<{ to: string[]; subject: string }> = [];
+    const send = async (to: string[], subject: string) => {
+      sent.push({ to, subject });
+      return outcome;
+    };
+    return { send, sent };
+  }
+
   it('refuses to announce a request that is not in the state the event claims', async () => {
     const pending = { user_id: 'u1', email: 'a@example.com', status: 'pending', delete_after: request.delete_after };
     const cancelled = { user_id: 'u2', email: 'b@example.com', status: 'cancelled', delete_after: request.delete_after };
     const { client } = fakeAdmin([pending, cancelled]);
-    assert.deepEqual(await notifyAdminsOfDeletion('nobody', 'requested', client), { sent: false, skipped: 'no_request' });
-    assert.deepEqual(await notifyAdminsOfDeletion('u2', 'requested', client), { sent: false, skipped: 'not_pending' });
-    assert.deepEqual(await notifyAdminsOfDeletion('u1', 'cancelled', client), { sent: false, skipped: 'not_cancelled' });
+    const { send, sent } = stubSender(true);
+    assert.deepEqual(await notifyAdminsOfDeletion('nobody', 'requested', client, send, admins), { sent: false, skipped: 'no_request' });
+    assert.deepEqual(await notifyAdminsOfDeletion('u2', 'requested', client, send, admins), { sent: false, skipped: 'not_pending' });
+    assert.deepEqual(await notifyAdminsOfDeletion('u1', 'cancelled', client, send, admins), { sent: false, skipped: 'not_cancelled' });
+    assert.equal(sent.length, 0);
+  });
+
+  it('emails every admin and stamps notified_at once the email went out', async () => {
+    const row = { user_id: 'u1', email: 'a@example.com', status: 'pending', delete_after: request.delete_after, notified_at: null };
+    const { client, updates } = fakeAdmin([row], [{ user_id: 'u1', display_name: 'Syed Naqvi' }]);
+    const { send, sent } = stubSender(true);
+    const result = await notifyAdminsOfDeletion('u1', 'requested', client, send, admins);
+    assert.equal(result.sent, true);
+    assert.deepEqual(sent[0].to, ['admin1@example.com', 'admin2@example.com']);
+    assert.equal(sent[0].subject, 'USAMPAC: Syed Naqvi asked to delete their account');
+    assert.equal(updates.length, 1);
+    assert.ok(row.notified_at, 'notified_at stamped');
   });
 
   it('does not stamp notified_at when no email went out, so the cron retries it', async () => {
-    // No RESEND_API_KEY / ADMIN_NOTIFY_FROM in tests → sendAdminEmail returns false.
     const row = { user_id: 'u1', email: 'a@example.com', status: 'pending', delete_after: request.delete_after, notified_at: null };
     const { client, updates } = fakeAdmin([row]);
-    const result = await notifyAdminsOfDeletion('u1', 'requested', client);
+    const { send } = stubSender(false);
+    const result = await notifyAdminsOfDeletion('u1', 'requested', client, send, admins);
     assert.equal(result.sent, false);
     assert.equal(updates.length, 0);
     assert.equal(row.notified_at, null);
   });
 
-  it('cron fallback looks only at pending rows with no notified_at', async () => {
+  it('a restore email never touches notified_at', async () => {
+    const row = { user_id: 'u1', email: 'a@example.com', status: 'cancelled', delete_after: request.delete_after, notified_at: null };
+    const { client, updates } = fakeAdmin([row]);
+    const { send, sent } = stubSender(true);
+    const result = await notifyAdminsOfDeletion('u1', 'cancelled', client, send, admins);
+    assert.equal(result.sent, true);
+    assert.match(sent[0].subject, /restored their account/);
+    assert.equal(updates.length, 0);
+  });
+
+  it('cron fallback emails only pending rows with no notified_at', async () => {
     const rows = [
       { user_id: 'fresh', email: 'a@example.com', status: 'pending', delete_after: request.delete_after, notified_at: null },
       { user_id: 'told', email: 'b@example.com', status: 'pending', delete_after: request.delete_after, notified_at: '2026-10-17T06:00:00Z' },
       { user_id: 'gone', email: 'c@example.com', status: 'cancelled', delete_after: request.delete_after, notified_at: null }
     ];
     const { client } = fakeAdmin(rows);
-    const result = await notifyUnannouncedDeletionRequests(client);
+    const { send, sent } = stubSender(true);
+    const result = await notifyUnannouncedDeletionRequests(client, send, admins);
     assert.equal(result.checked, 1);
-    assert.equal(result.notified, 0); // email not configured in tests
+    assert.equal(result.notified, 1);
+    assert.equal(sent.length, 1);
+    assert.ok(rows[0].notified_at);
+    assert.equal(rows[2].notified_at, null);
   });
 
   it('cron fallback only re-sends pending requests that were never announced', () => {

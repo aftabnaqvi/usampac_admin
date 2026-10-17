@@ -2,6 +2,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   adminAppUrl,
+  formSubmitAccepted,
+  formSubmitPayload,
+  formSubmitUrl,
+  hasResendConfig,
   isCronAuthorized,
   isPendingApprovalStatus,
   isWebhookAuthorized,
@@ -76,5 +80,26 @@ describe('pendingNotify', () => {
     );
     assert.equal(shouldNotifyWebhookBody({ record: { approval_status: 'approved' } }), false);
     assert.equal(adminAppUrl().startsWith('https://'), true);
+  });
+
+  it('falls back to FormSubmit exactly like the iOS app when Resend is not configured', () => {
+    assert.equal(hasResendConfig({}), false);
+    assert.equal(hasResendConfig({ RESEND_API_KEY: 'k' }), false);
+    assert.equal(hasResendConfig({ RESEND_API_KEY: 'k', ADMIN_NOTIFY_FROM: 'USAMPAC <no-reply@usampac.org>' }), true);
+
+    // Same relay URL and fields as PendingNotifyPolicy.formSubmitPayload in the app.
+    assert.equal(formSubmitUrl(' NaqviAsyed@Gmail.com '), 'https://formsubmit.co/ajax/naqviasyed@gmail.com');
+    assert.deepEqual(formSubmitPayload('USAMPAC: X asked to delete their account', 'body'), {
+      _subject: 'USAMPAC: X asked to delete their account',
+      _template: 'box',
+      _captcha: 'false',
+      name: 'USAMPAC',
+      message: 'body'
+    });
+
+    assert.equal(formSubmitAccepted('{"success":"true","message":"The form was submitted successfully."}'), true);
+    assert.equal(formSubmitAccepted('{"success": true}'), true);
+    assert.equal(formSubmitAccepted('{"success":"false","message":"Activate"}'), false);
+    assert.equal(formSubmitAccepted('<html>blocked</html>'), false);
   });
 });

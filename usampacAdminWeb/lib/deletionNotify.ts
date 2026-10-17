@@ -102,10 +102,14 @@ async function loadCandidate(admin: NotifyAdmin, userId: string): Promise<Deleti
  * Emails every admin about one request. For `requested` the row must be pending and
  * `notified_at` is stamped afterwards; for `cancelled` the row must be cancelled.
  */
+export type AdminEmailSender = (to: string[], subject: string, text: string, html: string) => Promise<boolean>;
+
 export async function notifyAdminsOfDeletion(
   userId: string,
   event: DeletionEvent,
-  admin: NotifyAdmin = supabaseAdmin() as any
+  admin: NotifyAdmin = supabaseAdmin() as any,
+  send: AdminEmailSender = sendAdminEmail,
+  recipients: () => Promise<string[]> = adminNotifyEmails
 ): Promise<{ sent: boolean; skipped?: string; emails?: string[] }> {
   const { data: request, error } = await api(admin)
     .from('account_deletion_requests')
@@ -120,8 +124,8 @@ export async function notifyAdminsOfDeletion(
 
   const candidate = await loadCandidate(admin, userId);
   const { subject, text, html } = deletionEmail(event, row, candidate);
-  const emails = await adminNotifyEmails();
-  const sent = await sendAdminEmail(emails, subject, text, html);
+  const emails = await recipients();
+  const sent = await send(emails, subject, text, html);
 
   if (event === 'requested' && sent) {
     await api(admin)
@@ -134,7 +138,9 @@ export async function notifyAdminsOfDeletion(
 
 /** Cron backup: pending requests the app never managed to announce. */
 export async function notifyUnannouncedDeletionRequests(
-  admin: NotifyAdmin = supabaseAdmin() as any
+  admin: NotifyAdmin = supabaseAdmin() as any,
+  send: AdminEmailSender = sendAdminEmail,
+  recipients: () => Promise<string[]> = adminNotifyEmails
 ): Promise<{ checked: number; notified: number }> {
   const { data, error } = await api(admin)
     .from('account_deletion_requests')
@@ -151,7 +157,7 @@ export async function notifyUnannouncedDeletionRequests(
   );
   let notified = 0;
   for (const row of rows) {
-    const result = await notifyAdminsOfDeletion(row.user_id, 'requested', admin);
+    const result = await notifyAdminsOfDeletion(row.user_id, 'requested', admin, send, recipients);
     if (result.sent) notified += 1;
   }
   return { checked: rows.length, notified };

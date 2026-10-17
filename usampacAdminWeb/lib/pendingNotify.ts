@@ -212,11 +212,65 @@ async function sendResendEmail(
   return sendAdminEmail(to, subject, text, html);
 }
 
-/** One Resend call for every admin notification. False when email is not configured. */
+/**
+ * One place for every admin notification. Resend when configured; otherwise the same
+ * FormSubmit relay the iOS app uses for pending-candidate emails, so nothing is lost
+ * when RESEND_API_KEY / ADMIN_NOTIFY_FROM are absent. False only when nothing went out.
+ */
 export async function sendAdminEmail(to: string[], subject: string, text: string, html: string): Promise<boolean> {
+  if (to.length === 0) return false;
+  if (hasResendConfig()) return sendViaResend(to, subject, text, html);
+  return sendViaFormSubmit(to, subject, text);
+}
+
+export function hasResendConfig(env: Record<string, string | undefined> = process.env): boolean {
+  return Boolean(env.RESEND_API_KEY && env.ADMIN_NOTIFY_FROM);
+}
+
+export function formSubmitUrl(email: string): string {
+  return `https://formsubmit.co/ajax/${email.trim().toLowerCase()}`;
+}
+
+export function formSubmitPayload(subject: string, text: string): Record<string, string> {
+  return { _subject: subject, _template: 'box', _captcha: 'false', name: 'USAMPAC', message: text };
+}
+
+export function formSubmitAccepted(body: string): boolean {
+  return body.includes('"success":"true"') || body.includes('"success": true') || body.includes('"success":true');
+}
+
+async function sendViaFormSubmit(to: string[], subject: string, text: string): Promise<boolean> {
+  const origin = adminAppUrl();
+  const payload = JSON.stringify(formSubmitPayload(subject, text));
+  let sent = false;
+  for (const email of to) {
+    try {
+      const response = await fetch(formSubmitUrl(email), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Origin: origin,
+          Referer: `${origin}/`
+        },
+        body: payload
+      });
+      const body = await response.text();
+      if (response.ok && formSubmitAccepted(body)) {
+        sent = true;
+      } else {
+        console.error('admin email: FormSubmit refused', email, response.status, body.slice(0, 200));
+      }
+    } catch (error) {
+      console.error('admin email: FormSubmit failed', email, error);
+    }
+  }
+  return sent;
+}
+
+async function sendViaResend(to: string[], subject: string, text: string, html: string): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.ADMIN_NOTIFY_FROM;
-  if (!apiKey || !from || to.length === 0) return false;
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
