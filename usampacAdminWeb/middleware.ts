@@ -71,6 +71,8 @@ export const config = {
     '/elected/:path*',
     '/manage',
     '/manage/:path*',
+    '/deletions',
+    '/deletions/:path*',
     '/admins',
     '/admins/:path*',
     '/polls',

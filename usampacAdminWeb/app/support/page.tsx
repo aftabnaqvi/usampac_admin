@@ -35,6 +35,12 @@ export default function SupportPage() {
         reset email is sent to the address you registered with.
       </p>
       <p>
+        <strong>I want to delete my account.</strong> Sign in, open Settings (gear), and tap Delete
+        Account. Your account is deleted 30 days later. Until then you can cancel from the same
+        screen. Deletion removes your login, profile, contact details, and photo. If your listing
+        was approved, your name, office, party, and election year are kept as election history.
+      </p>
+      <p>
         <strong>Donations.</strong> The app opens USAMPAC’s donation page. It does not process
         payments itself:{' '}
         <a href="https://usampac.org/donate-us">usampac.org/donate-us</a>.

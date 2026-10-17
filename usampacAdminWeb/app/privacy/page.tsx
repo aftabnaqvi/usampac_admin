@@ -84,6 +84,12 @@ export default function PrivacyPage() {
         <li>Leave phone blank if you do not want it published</li>
         <li>Edit your profile from the app after you sign in</li>
         <li>
+          Delete your account in the app from Settings → Delete Account. Deletion happens 30 days
+          after you ask, and you can cancel before then. Your login, profile, email, phone, photo,
+          and statement are removed. For an approved listing, we keep your name, office, party,
+          location, and election year as a record of past candidacies.
+        </li>
+        <li>
           Ask us to correct or remove a listing by using the{' '}
           <a href="/support">Support</a> page
         </li>

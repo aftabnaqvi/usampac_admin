@@ -27,6 +27,7 @@ const GROUPS = [
     label: 'Admin',
     links: [
       { href: '/manage', label: 'Manage' },
+      { href: '/deletions', label: 'Deletions' },
       { href: '/admins', label: 'Admins' }
     ]
   }
