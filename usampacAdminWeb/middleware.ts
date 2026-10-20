@@ -81,6 +81,8 @@ export const config = {
     '/quiz/:path*',
     '/notifications',
     '/notifications/:path*',
+    '/documents',
+    '/documents/:path*',
     '/analytics',
     '/analytics/:path*'
   ]

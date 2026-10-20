@@ -20,6 +20,7 @@ const GROUPS = [
       { href: '/polls', label: 'Polls' },
       { href: '/quiz', label: 'Quiz' },
       { href: '/notifications', label: 'Notifications' },
+      { href: '/documents', label: 'Files' },
       { href: '/analytics', label: 'Analytics' }
     ]
   },
